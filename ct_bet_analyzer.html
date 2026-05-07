@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C神投注分析器 · 赔率+必发+亚盘</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC",sans-serif;padding:20px 12px 60px}
+.ct{max-width:800px;margin:0 auto}
+h1{font-size:1.2rem;margin-bottom:2px}
+.sub{font-size:0.72rem;color:#64748b;margin-bottom:14px}
+.card{background:#fff;border-radius:16px;padding:20px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-bottom:12px}
+.card h2{font-size:0.82rem;padding-bottom:8px;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+.field{margin-bottom:12px}
+.field label{font-size:0.7rem;color:#475569;display:block;margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:0.88rem;font-family:inherit;outline:none;transition:border-color .2s;background:#fafafa}
+.field input:focus,.field select:focus{border-color:#dc2626}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:0.95rem;font-family:inherit;font-weight:700;cursor:pointer;background:#dc2626;color:#fff;transition:all .15s}
+.btn:hover{background:#b91c1c;transform:translateY(-1px)}
+.btn:active{transform:none}
+.result-box{border-radius:12px;padding:16px;margin-top:12px;font-size:0.82rem;display:none}
+.result-box.show{display:block}
+.score-big{text-align:center;padding:14px 0}
+.score-big .num{font-size:3rem;font-weight:900;line-height:1}
+.score-big .label{font-size:0.65rem;color:#64748b;margin-top:4px;letter-spacing:.08em}
+.score-big .badge{display:inline-block;padding:4px 16px;border-radius:20px;font-size:0.72rem;font-weight:700;margin-top:6px}
+.grade-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:10px 0}
+.grade-item{border-radius:10px;padding:12px 8px;text-align:center}
+.grade-item .gv{font-size:1.4rem;font-weight:900}
+.grade-item .gl{font-size:0.6rem;color:#64748b;margin-top:2px}
+.bar-wrap{background:#e2e8f0;border-radius:8px;height:20px;overflow:hidden;margin:8px 0}
+.bar-fill{height:100%;border-radius:8px;text-align:center;font-size:0.6rem;font-weight:700;color:#fff;line-height:20px;transition:width .3s}
+.detail-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:0.75rem;line-height:1.6}
+.detail-row:last-child{border-bottom:none}
+.detail-row .dl{color:#64748b}
+.detail-row .dv{font-weight:600}
+.warn{border-radius:10px;padding:10px 14px;font-size:0.75rem;margin:8px 0}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.65rem;font-weight:700;margin-right:4px}
+</style>
+</head>
+<body>
+<div class="ct">
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+<h1 style="flex:1">⚽ C神投注分析器</h1>
+<span style="background:#dc2626;color:#fff;font-size:0.58rem;padding:3px 8px;border-radius:6px;font-weight:700;white-space:nowrap">BJ时间 周日23:30/周一0:30</span>
+</div>
+<div class="sub">输入赔率+必发数据 → 基于4赛季142场英超历史统计 自动判断最佳策略</div>
+
+<div class="card">
+<h2>📋 输入参数</h2>
+<div class="row-2">
+<div class="field">
+<label>主队赔率</label>
+<input id="odds-h" type="number" step="0.01" placeholder="如: 2.10" oninput="calc()" />
+</div>
+<div class="field">
+<label>客队赔率</label>
+<input id="odds-a" type="number" step="0.01" placeholder="如: 1.80" oninput="calc()" />
+</div>
+</div>
+<div class="field">
+<label>赔率精度说明</label>
+<select id="handicap-rule" onchange="calc()">
+<option value="auto">自动判断盘口（推荐）</option>
+<option value="football">按赔率盘口规则精确判断</option>
+</select>
+</div>
+<div class="row-2">
+<div class="field">
+<label>必发成交量 (万/亿)</label>
+<input id="volume" type="number" step="0.1" placeholder="如: 12.5 (1250万)" oninput="calc()" />
+</div>
+<div class="field">
+<label>必发优势方比例 (%)</label>
+<input id="bf-pct" type="number" step="0.1" placeholder="如: 78" oninput="calc()" />
+</div>
+</div>
+<div class="row-2">
+<div class="field">
+<label>平局赔率</label>
+<input id="odds-d" type="number" step="0.01" placeholder="如: 3.50" oninput="calc()" />
+</div>
+<div class="field">
+<label>预计净胜球</label>
+<select id="goal-diff" onchange="calc()">
+<option value="1">赢1球</option>
+<option value="2">赢2球</option>
+<option value="3">赢3球+</option>
+<option value="0">平局</option>
+<option value="-1">输球</option>
+</select>
+</div>
+</div>
+<button class="btn" onclick="calc()">🔍 开始分析</button>
+</div>
+
+<div class="card" id="result-card" style="display:none">
+<h2>📊 分析报告</h2>
+
+<div class="result-box show" id="result-content"></div>
+</div>
+
+<div style="text-align:center;font-size:0.68rem;color:#94a3b8;padding-top:6px">
+数据来源：五大联赛历史库 · 仅统计北京时间周日23:30 / 周一00:30开赛的英超比赛<br>
+统计周期：2022-23至2025-26赛季 · 共142场历史数据<br>
+盘口规则：基于赔率盘口知识体系 · 生成于 2026-05-08 02:00 CST
+</div>
+</div>
+
+<script>
+const BG = {
+  '上盘':'#16a34a','走水':'#ca8a04','下盘':'#dc2626','赢半':'#2563eb'
+};
+
+function ahResult(oh, oa, gd) {
+  var fo = Math.min(oh, oa);
+  var fw = oh < oa ? (gd > 0) : (gd < 0);
+  var fgd = oh < oa ? gd : -gd;
+  if (!fw) return '下盘';
+  if (fo < 1.20) return fgd <= 2 ? '下盘' : '上盘';
+  if (fo <= 1.29) return fgd === 1 ? '下盘' : (fgd === 2 ? '赢半' : '上盘');
+  if (fo <= 1.47) return fgd === 1 ? '下盘' : '上盘';
+  if (fo <= 1.60) return fgd === 1 ? '走水' : '上盘';
+  return '上盘';
+}
+
+function getOddsBracket(fo) {
+  if (fo < 1.20) return '<1.20';
+  if (fo <= 1.29) return '1.20-1.29';
+  if (fo <= 1.47) return '1.30-1.47';
+  if (fo <= 1.60) return '1.48-1.60';
+  if (fo <= 1.90) return '1.61-1.90';
+  if (fo <= 2.20) return '1.91-2.20';
+  if (fo <= 3.00) return '2.21-3.00';
+  return '>3.00';
+}
+
+function getVolumeLabel(v) {
+  if (v <= 0) return '无数据';
+  if (v < 5) return '<5M (小盘)';
+  if (v < 10) return '5-10M (中盘)';
+  if (v < 15) return '10-15M (活跃)';
+  if (v < 20) return '15-20M (大盘)';
+  return '>20M (超大盘)';
+}
+
+function getBFPctLabel(p) {
+  if (p <= 0) return '无数据';
+  if (p < 50) return '<50% (冷门区)';
+  if (p < 65) return '50-65% (均衡)';
+  if (p < 75) return '65-75% (温和)';
+  if (p < 85) return '75-85% (热门)';
+  return '85%+ (极度热门 ⚠️)';
+}
+
+// Historical stats derived from 4 seasons of data
+const HIST = {
+  // 主场优势方
+  home: {
+    '<1.20': { total:2, up:0, push:0, half:0, down:2, rate:0, avgBF:89.7, avgVol:9.7 },
+    '1.20-1.29': { total:5, up:1, push:0, half:2, down:2, rate:20, avgBF:87.9, avgVol:11.34 },
+    '1.30-1.47': { total:9, up:4, push:0, half:0, down:5, rate:44, avgBF:83.8, avgVol:15.94 },
+    '1.48-1.60': { total:10, up:2, push:5, half:0, down:3, rate:20, avgBF:80.7, avgVol:12.23 },
+    '1.61-1.90': { total:16, up:10, push:0, half:0, down:6, rate:62, avgBF:78.7, avgVol:12.74 },
+    '1.91-2.20': { total:14, up:9, push:0, half:0, down:5, rate:64, avgBF:69.6, avgVol:12.09 },
+    '2.21-3.00': { total:23, up:8, push:0, half:0, down:15, rate:34, avgBF:56.1, avgVol:9.0 },
+  },
+  // 客场优势方
+  away: {
+    '1.20-1.29': { total:4, up:0, push:0, half:1, down:3, rate:0, avgBF:89.4, avgVol:12.55 },
+    '1.30-1.47': { total:6, up:4, push:0, half:0, down:2, rate:66, avgBF:82.7, avgVol:12.92 },
+    '1.48-1.60': { total:7, up:4, push:1, half:0, down:2, rate:57, avgBF:80.9, avgVol:12.56 },
+    '1.61-1.90': { total:13, up:7, push:0, half:0, down:6, rate:53, avgBF:79.8, avgVol:12.79 },
+    '1.91-2.20': { total:12, up:7, push:0, half:0, down:5, rate:58, avgBF:72.5, avgVol:12.86 },
+    '2.21-3.00': { total:21, up:10, push:0, half:0, down:11, rate:47, avgBF:59.0, avgVol:8.37 },
+  }
+};
+
+// Volume-based stats
+const VOL_STATS = {
+  '<5M': { up:11, down:12, push:2, rate:44, avgOdds:2.00, avgBF:63.2 },
+  '5-10M': { up:15, down:18, push:0, half:1, rate:44, avgOdds:1.84, avgBF:74.3 },
+  '10-15M': { up:25, down:19, push:1, rate:55, avgOdds:2.02, avgBF:69.8 },
+  '15-20M': { up:12, down:7, push:2, half:2, rate:52, avgOdds:1.82, avgBF:78.4 },
+  '>20M': { up:3, down:11, push:1, rate:20, avgOdds:1.64, avgBF:81.5 },
+};
+
+const BF_STATS = {
+  '<50%': { up:4, down:6, rate:40, avgOdds:2.57, avgVol:4.4 },
+  '50-65%': { up:12, down:15, rate:44, avgOdds:2.36, avgVol:10.4 },
+  '65-75%': { up:16, down:15, rate:51, avgOdds:2.04, avgVol:10.9 },
+  '75-85%': { up:29, down:20, push:5, rate:53, avgOdds:1.66, avgVol:11.1 },
+  '85%+': { up:5, down:11, push:1, half:3, rate:25, avgOdds:1.39, avgVol:18.6 },
+};
+
+function calc() {
+  var oh = parseFloat(document.getElementById('odds-h').value);
+  var oa = parseFloat(document.getElementById('odds-a').value);
+  var od = parseFloat(document.getElementById('odds-d').value) || 0;
+  var vol = parseFloat(document.getElementById('volume').value) || 0;
+  var bf = parseFloat(document.getElementById('bf-pct').value) || 0;
+  var gdOpt = document.getElementById('goal-diff').value;
+  var gd = parseInt(gdOpt);
+
+  if (!oh || !oa) {
+    document.getElementById('result-card').style.display = 'none';
+    return;
+  }
+
+  var isHomeFav = oh < oa;
+  var favOdds = Math.min(oh, oa);
+  var fav = isHomeFav ? '主队' : '客队';
+  var favTeam = isHomeFav ? document.getElementById('odds-h').previousElementSibling.textContent.replace('赔率','').trim() : '客队';
+  var bracket = getOddsBracket(favOdds);
+  var ah = ahResult(oh, oa, gd);
+  var db = isHomeFav ? HIST.home : HIST.away;
+  var hist = db[bracket];
+  var volLabel = getVolumeLabel(vol);
+  var volStat = VOL_STATS[volLabel] || null;
+  var bfLabel = getBFPctLabel(bf);
+  var bfStat = BF_STATS[bfLabel] || null;
+
+  var el = document.getElementById('result-content');
+  var H = '';
+
+  // === Signal ===
+  var signalScore = 50;
+  var signals = [];
+
+  if (hist) {
+    var baseRate = hist.rate;
+    signalScore = baseRate;
+    
+    // Adjust based on BF%
+    if (bf >= 85) { signalScore -= 15; signals.push('必发过热(-15)'); }
+    else if (bf >= 75) { signalScore += 3; signals.push('必发偏好(+3)'); }
+    else if (bf >= 65) { signalScore += 5; signals.push('必发适中(+5)'); }
+    else if (bf < 50) { signalScore += 0; signals.push('冷门区'); }
+    
+    // Adjust based on volume
+    if (vol > 20) { signalScore -= 15; signals.push('成交量过大(-15)'); }
+    else if (vol >= 15) { signalScore += 2; signals.push('大盘(+2)'); }
+    else if (vol >= 10) { signalScore += 3; signals.push('活跃(+3)'); }
+    else if (vol > 0 && vol < 5) { signalScore -= 5; signals.push('成交稀疏(-5)'); }
+    
+    // Adjust based on home/away
+    if (!isHomeFav && bracket === '1.30-1.47') { signalScore += 8; signals.push('客场深让(+8)'); }
+    if (isHomeFav && (bracket === '1.61-1.90' || bracket === '1.91-2.20')) { signalScore += 5; signals.push('主场中赔(+5)'); }
+    if (isHomeFav && bracket === '1.48-1.60') { signalScore -= 10; signals.push('主场一球陷阱(-10)'); }
+    if (bracket === '1.48-1.60' && gd === 1) { signalScore -= 10; signals.push('走水风险(-10)'); }
+    
+    // 1-goal win = push warning
+    if (bracket === '1.48-1.60' && gd === 1) { signalScore -= 5; }
+  }
+
+  signalScore = Math.max(0, Math.min(100, signalScore));
+
+  var recClass = signalScore >= 65 ? '上盘' : (signalScore >= 40 ? '走水' : '下盘');
+  var recText = signalScore >= 65 ? '✅ 推荐' : (signalScore >= 40 ? '⚠️ 谨慎' : '❌ 回避');
+
+  // Grade grid
+  var ur = hist ? hist.rate : 0;
+  var histLabel = ur >= 60 ? '良好' : (ur >= 40 ? '一般' : '偏低');
+  var bfLabelShort = bfStat ? (bfStat.rate >= 50 ? '正常' : '异常') : '未知';
+  var volLabelShort = volStat ? (volStat.rate >= 50 ? '正常' : '异常') : '未知';
+
+  H += '<div class="score-big">';
+  H += '<div class="num" style="color:' + BG[recClass] + '">' + signalScore + '</div>';
+  H += '<div class="label">综合评分 · ' + recText + '</div>';
+  H += '<span class="badge" style="background:' + BG[ah] + ';color:#fff">预计: ' + ah + '</span>';
+  H += '</div>';
+
+  H += '<div class="grade-grid">';
+  var g1c = ur >= 55 ? '#16a34a' : (ur >= 35 ? '#ca8a04' : '#dc2626');
+  H += '<div class="grade-item" style="background:#f8fafc"><div class="gv" style="color:' + g1c + '">' + ur + '%</div><div class="gl">赔率区间上盘率</div></div>';
+  var g2c = bfStat ? (bfStat.rate >= 45 ? '#16a34a' : '#dc2626') : '#94a3b8';
+  H += '<div class="grade-item" style="background:#f8fafc"><div class="gv" style="color:' + g2c + '">' + (bfStat ? bfStat.rate + '%' : '?') + '</div><div class="gl">此必发区间上盘率</div></div>';
+  var g3c = volStat ? (volStat.rate >= 45 ? '#16a34a' : '#dc2626') : '#94a3b8';
+  H += '<div class="grade-item" style="background:#f8fafc"><div class="gv" style="color:' + g3c + '">' + (volStat ? volStat.rate + '%' : '?') + '</div><div class="gl">此成交量上盘率</div></div>';
+  H += '</div>';
+
+  // Confidence bar
+  H += '<div class="bar-wrap"><div class="bar-fill" style="width:' + signalScore + '%;background:' + BG[recClass] + '">' + signalScore + '/100</div></div>';
+
+  // Details
+  H += '<div class="detail-row"><span class="dl">优势方</span><span class="dv">' + fav + ' (赔率 ' + favOdds.toFixed(2) + ')</span></div>';
+  H += '<div class="detail-row"><span class="dl">赔率区间</span><span class="dv">' + bracket + '</span></div>';
+  H += '<div class="detail-row"><span class="dl">历史同区间样本</span><span class="dv">' + (hist ? hist.total + '场' : '无数据') + '</span></div>';
+  if (hist) {
+    H += '<div class="detail-row"><span class="dl">历史同区间分布</span><span class="dv">🟢上盘' + hist.up + ' 🟡走水' + hist.push + ' 🔵赢半' + hist.half + ' 🔴下盘' + hist.down + '</span></div>';
+  }
+  H += '<div class="detail-row"><span class="dl">必发比例</span><span class="dv">' + bfLabel + (hist ? ' (历史均' + hist.avgBF + '%)' : '') + '</span></div>';
+  H += '<div class="detail-row"><span class="dl">成交量</span><span class="dv">' + volLabel + (hist ? ' (历史均' + hist.avgVol.toFixed(1) + 'M)' : '') + '</span></div>';
+  
+  if (gdOpt === '1' && bracket === '1.48-1.60') {
+    H += '<div class="warn" style="background:#fef9c3;border:1px solid #ca8a04">⚠️ <strong>走水预警：</strong>1.48-1.60区间赢1球=走水，盘口不收。历史此区间走水率' + hist.push + '/' + hist.total + ' (' + Math.round(hist.push/hist.total*100) + '%)</div>';
+  }
+  if (bf >= 85) {
+    H += '<div class="warn" style="background:#fee2e2;border:1px solid #dc2626">🚫 <strong>过热风险：</strong>必发85%+的比赛上盘率仅25%。市场过度追捧，爆冷概率大增。</div>';
+  }
+  if (vol > 20) {
+    H += '<div class="warn" style="background:#fee2e2;border:1px solid #dc2626">🚫 <strong>天量成交：</strong>>20M的比赛上盘率仅20%。大资金涌入≠结果确定。</div>';
+  }
+  if (isHomeFav && bracket === '1.48-1.60') {
+    H += '<div class="warn" style="background:#fee2e2;border:1px solid #dc2626">⚠️ <strong>主场陷阱：</strong>主场优势方+1.48-1.60的上盘率仅20%，是所有组合中最低的。</div>';
+  }
+  if (!isHomeFav && bracket === '1.30-1.47') {
+    H += '<div class="warn" style="background:#dcfce7;border:1px solid #16a34a">✅ <strong>最佳区间：</strong>客场优势方+1.30-1.47的上盘率66%，全场最高！</div>';
+  }
+  if (signals.length > 0) {
+    H += '<div class="detail-row"><span class="dl">信号修正</span><span class="dv">' + signals.join(' ') + '</span></div>';
+  }
+
+  // Suggested strategy
+  H += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:0.82rem;line-height:1.7">';
+  H += '<strong>🎯 策略建议</strong><br>';
+  
+  if (signalScore >= 65) {
+    H += '✅ <strong>可投注。</strong>';
+    if (bracket === '1.48-1.60') H += '注意：赢1球只走水，需要赢2球以上才收全盘。';
+    if (!isHomeFav) H += '客场优势方在这个时段表现更稳定。';
+    if (bf >= 65 && bf < 85) H += '必发比例适中，市场判断较为合理。';
+  } else if (signalScore >= 40) {
+    H += '⚠️ <strong>谨慎投注。</strong>';
+    if (bracket === '1.48-1.60') H += '一球盘走水风险高。';
+    if (bf >= 85) H += '市场过热，建议观望。';
+    if (isHomeFav && (bracket === '1.30-1.47' || bracket === '<1.20')) H += '主场优势方+低赔，不一定是好事。';
+  } else {
+    H += '❌ <strong>不建议投注。</strong>';
+    if (isHomeFav && bracket === '1.48-1.60') H += '主场一球陷阱，历史上盘率极低。';
+    if (bf >= 85) H += '必发过热，爆冷概率高。';
+    if (vol > 20) H += '资金过度集中，往往是陷阱。';
+  }
+  H += '</div>';
+
+  el.innerHTML = H;
+  document.getElementById('result-card').style.display = 'block';
+  document.getElementById('result-card').scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body>
+</html>
