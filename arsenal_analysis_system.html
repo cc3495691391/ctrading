@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阿森纳 · 赔率+必发+亚盘 分析系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC",sans-serif;padding:20px 12px 80px}
+.ct{max-width:1200px;margin:0 auto}
+h1{font-size:1.15rem;margin-bottom:2px}
+.sub{font-size:0.7rem;color:#64748b;margin-bottom:14px}
+.card{background:#fff;border-radius:14px;padding:16px 14px;box-shadow:0 1px 5px rgba(0,0,0,0.06);margin-bottom:10px}
+.card h2{font-size:0.82rem;padding-bottom:8px;border-bottom:1px solid #e2e8f0;margin-bottom:10px}
+
+/* Filters */
+.fb{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.fb select,.fb input{padding:7px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:0.75rem;font-family:inherit;outline:none;background:#fafafa}
+.fb select:focus,.fb input:focus{border-color:#dc2626}
+.fb label{font-size:0.65rem;color:#475569;display:flex;align-items:center;gap:4px}
+.btn{padding:7px 14px;border:none;border-radius:8px;font-size:0.75rem;font-family:inherit;font-weight:700;cursor:pointer;background:#dc2626;color:#fff}
+
+/* Stats bar */
+.sb{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:10px}
+.si{border-radius:8px;padding:8px 6px;text-align:center;background:#f8fafc}
+.si .sv{font-size:1.1rem;font-weight:900}
+.si .sl{font-size:0.55rem;color:#64748b;margin-top:1px}
+
+/* Table */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.68rem}
+th{background:#f1f5f9;padding:5px 4px;text-align:center;border-bottom:2px solid #e2e8f0;font-size:0.58rem;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#e2e8f0}
+td{padding:4px;text-align:center;border-bottom:1px solid #f1f5f9;font-size:0.65rem;white-space:nowrap}
+tr:hover{background:#f8fafc}
+.st{display:inline-block;padding:1px 4px;border-radius:3px;font-size:0.48rem;font-weight:700;color:#fff}
+.s2223{background:#dc2626}.s2324{background:#ca8a04}.s2425{background:#16a34a}.s2526{background:#1d4ed8}
+.tag{display:inline-block;padding:0 4px;border-radius:3px;font-size:0.55rem;font-weight:700;color:#fff}
+.tup{background:#16a34a}.tdown{background:#dc2626}.tpush{background:#ca8a04}.thalf{background:#2563eb}
+.slot{display:inline-block;padding:0 4px;border-radius:3px;font-size:0.48rem;color:#fff}
+.slot.sun{background:#6366f1}.slot.mon{background:#8b5cf6}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.chart-box{border-radius:10px;padding:12px;background:#f8fafc;font-size:0.65rem}
+.chart-box .ctitle{font-weight:700;margin-bottom:6px;font-size:0.72rem}
+.bar-container{margin:3px 0}
+.bar-label{display:flex;justify-content:space-between;font-size:0.6rem;color:#64748b;margin-bottom:1px}
+.bar-track{height:14px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex}
+.bar-fill{height:100%;transition:width .3s}
+
+/* Pattern highlight */
+.pattern-box{border-radius:8px;padding:10px;margin:6px 0;border-left:3px solid}
+.pattern-box.good{background:#f0fdf4;border-color:#16a34a}
+.pattern-box.bad{background:#fef2f2;border-color:#dc2626}
+.pattern-box.info{background:#eff6ff;border-color:#2563eb}
+</style>
+</head>
+<body>
+<div class="ct">
+
+<h1>🔴 阿森纳 周日23:30/周一00:30 · 全维度分析系统</h1>
+<div class="sub">基于2022-23至2025-26赛季 32场历史数据 · 过滤/排序/统计分析</div>
+
+<div class="card">
+<h2>🔍 筛选</h2>
+<div class="fb">
+<label>赛季 <select id="fs"><option value="">全部</option><option>22-23</option><option>23-24</option><option>24-25</option><option>25-26</option></select></label>
+<label>时段 <select id="ft"><option value="">全部</option><option value="周日">周日23:30</option><option value="周一">周一00:30</option></select></label>
+<label>阿森纳 <select id="fp"><option value="">全部</option><option value="主队">主场</option><option value="客队">客场</option></select></label>
+<label>优势方 <select id="ff"><option value="">全部</option><option value="主">主队优势</option><option value="客">客队优势</option></select></label>
+<label>盘口结果 <select id="fa"><option value="">全部</option><option>上盘</option><option>走水</option><option>赢半</option><option>下盘</option></select></label>
+<label>赔率 <select id="fb2"><option value="">全部</option><option><1.20</option><option>1.20-1.29</option><option>1.30-1.47</option><option>1.48-1.60</option><option>1.61-1.90</option><option>1.91-2.20</option><option>2.21-3.00</option></select></label>
+<label>必发 <select id="fbf"><option value="">全部</option><option><50%</option><option>50-65%</option><option>65-75%</option><option>75-85%</option><option>85%+</option></select></label>
+<button class="btn" onclick="apply()">应用</button>
+</div>
+</div>
+
+<div class="card">
+<h2>📊 统计概览</h2>
+<div class="sb" id="stats-bar"></div>
+<div class="chart-grid" id="charts"></div>
+</div>
+
+<div class="card">
+<h2>📋 逐场明细</h2>
+<div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
+</div>
+
+<div class="card">
+<h2>📊 交叉分析</h2>
+<div id="patterns"></div>
+</div>
+
+<div class="ft" style="text-align:center;font-size:0.68rem;color:#94a3b8;padding-top:6px">
+数据来源：五大联赛历史库 · 统计生成 2026-05-08
+</div>
+
+</div>
+
+<script>
+var DATA = [];
+
+var COLUMNS = [
+  {key:'s', label:'赛季', cls:'st'},
+  {key:'d', label:'日期'},
+  {key:'t', label:'时间'},
+  {key:'home', label:'主队'},
+  {key:'score', label:'比分'},
+  {key:'away', label:'客队'},
+  {key:'fo', label:'赔率', fmt:function(v){return v.toFixed(2)}},
+  {key:'fav', label:'优'},
+  {key:'br', label:'赔率区间'},
+  {key:'vol', label:'成交量', fmt:function(v){return v.toFixed(1)+'M'}},
+  {key:'bf', label:'必发%', fmt:function(v){return v.toFixed(0)+'%'}},
+  {key:'actual', label:'盘口结果'},
+];
+
+// Data generation function - will be called from JSON
+function generateData() {
+  return [];
+}
+
+// ========== CORE DATA EMBEDDED ==========
+</script>
+<script>
+DATA = [
+  {s:"22-23",d:"09-04",t:"23:30",day:"星期日",home:"曼联",score:"3:1",away:"阿森纳",fo:2.76,hf:true,fav:"主",ars_pos:"客队",br:"2.21-3.00",vol:10.5,bf:44,actual:"上盘"},
+  {s:"22-23",d:"10-09",t:"23:30",day:"星期日",home:"阿森纳",score:"3:2",away:"利物浦",fo:2.60,hf:true,fav:"主",ars_pos:"主队",br:"2.21-3.00",vol:11.5,bf:52,actual:"上盘"},
+  {s:"22-23",d:"01-16",t:"00:30",day:"星期一",home:"托特纳姆热刺",score:"0:2",away:"阿森纳",fo:2.32,hf:false,fav:"客",ars_pos:"客队",br:"2.21-3.00",vol:13.1,bf:64,actual:"上盘"},
+  {s:"22-23",d:"01-23",t:"00:30",day:"星期一",home:"阿森纳",score:"3:2",away:"曼联",fo:1.88,hf:true,fav:"主",ars_pos:"主队",br:"1.61-1.90",vol:22.5,bf:80,actual:"上盘"},
+  {s:"22-23",d:"04-09",t:"23:30",day:"星期日",home:"利物浦",score:"2:2",away:"阿森纳",fo:2.60,hf:false,fav:"客",ars_pos:"客队",br:"2.21-3.00",vol:10.3,bf:55,actual:"下盘"},
+  {s:"22-23",d:"05-07",t:"23:30",day:"星期日",home:"纽卡斯尔",score:"0:2",away:"阿森纳",fo:2.30,hf:true,fav:"主",ars_pos:"客队",br:"2.21-3.00",vol:13.3,bf:60,actual:"下盘"},
+  {s:"22-23",d:"05-14",t:"23:30",day:"星期日",home:"阿森纳",score:"0:3",away:"布莱顿",fo:1.76,hf:true,fav:"主",ars_pos:"主队",br:"1.61-1.90",vol:13.7,bf:84,actual:"下盘"},
+  {s:"22-23",d:"05-28",t:"23:30",day:"星期日",home:"阿森纳",score:"5:0",away:"狼队",fo:1.32,hf:true,fav:"主",ars_pos:"主队",br:"1.30-1.47",vol:3.7,bf:77,actual:"上盘"},
+  {s:"23-24",d:"09-03",t:"23:30",day:"星期日",home:"阿森纳",score:"3:1",away:"曼联",fo:1.82,hf:true,fav:"主",ars_pos:"主队",br:"1.61-1.90",vol:17.6,bf:79,actual:"上盘"},
+  {s:"23-24",d:"09-17",t:"23:30",day:"星期日",home:"埃弗顿",score:"0:1",away:"阿森纳",fo:1.59,hf:false,fav:"客",ars_pos:"客队",br:"1.48-1.60",vol:17.3,bf:82,actual:"走水"},
+  {s:"23-24",d:"10-08",t:"23:30",day:"星期日",home:"阿森纳",score:"1:0",away:"曼城",fo:2.54,hf:false,fav:"客",ars_pos:"主队",br:"2.21-3.00",vol:19.9,bf:54,actual:"下盘"},
+  {s:"23-24",d:"02-05",t:"00:30",day:"星期一",home:"阿森纳",score:"3:1",away:"利物浦",fo:2.30,hf:true,fav:"主",ars_pos:"主队",br:"2.21-3.00",vol:13.7,bf:62,actual:"上盘"},
+  {s:"23-24",d:"03-31",t:"23:30",day:"星期日",home:"曼城",score:"0:0",away:"阿森纳",fo:2.10,hf:true,fav:"主",ars_pos:"客队",br:"1.91-2.20",vol:21.9,bf:69,actual:"下盘"},
+  {s:"23-24",d:"05-12",t:"23:30",day:"星期日",home:"曼联",score:"0:1",away:"阿森纳",fo:1.32,hf:false,fav:"客",ars_pos:"客队",br:"1.30-1.47",vol:25.9,bf:87,actual:"下盘"},
+  {s:"23-24",d:"05-19",t:"23:00",day:"星期日",home:"阿森纳",score:"2:1",away:"埃弗顿",fo:1.22,hf:true,fav:"主",ars_pos:"主队",br:"1.20-1.29",vol:7.8,bf:92,actual:"下盘"},
+  {s:"24-25",d:"09-22",t:"23:30",day:"星期日",home:"曼城",score:"2:2",away:"阿森纳",fo:1.83,hf:true,fav:"主",ars_pos:"客队",br:"1.61-1.90",vol:20.2,bf:74,actual:"下盘"},
+  {s:"24-25",d:"10-28",t:"00:30",day:"星期一",home:"阿森纳",score:"2:2",away:"利物浦",fo:2.34,hf:true,fav:"主",ars_pos:"主队",br:"2.21-3.00",vol:13.6,bf:57,actual:"下盘"},
+  {s:"24-25",d:"11-11",t:"00:30",day:"星期一",home:"切尔西",score:"1:1",away:"阿森纳",fo:2.52,hf:false,fav:"客",ars_pos:"客队",br:"2.21-3.00",vol:11.7,bf:56,actual:"下盘"},
+  {s:"24-25",d:"02-03",t:"00:30",day:"星期一",home:"阿森纳",score:"5:1",away:"曼城",fo:1.96,hf:true,fav:"主",ars_pos:"主队",br:"1.91-2.20",vol:17.2,bf:72,actual:"上盘"},
+  {s:"24-25",d:"03-10",t:"00:30",day:"星期一",home:"曼联",score:"1:1",away:"阿森纳",fo:1.81,hf:false,fav:"客",ars_pos:"客队",br:"1.61-1.90",vol:10.7,bf:70,actual:"下盘"},
+  {s:"24-25",d:"05-11",t:"23:30",day:"星期日",home:"利物浦",score:"2:2",away:"阿森纳",fo:2.30,hf:true,fav:"主",ars_pos:"客队",br:"2.21-3.00",vol:6.7,bf:68,actual:"下盘"},
+  {s:"24-25",d:"05-18",t:"23:30",day:"星期日",home:"阿森纳",score:"1:0",away:"纽卡斯尔",fo:2.00,hf:true,fav:"主",ars_pos:"主队",br:"1.91-2.20",vol:8.6,bf:79,actual:"上盘"},
+  {s:"24-25",d:"05-25",t:"23:00",day:"星期日",home:"南安普敦",score:"1:2",away:"阿森纳",fo:1.28,hf:false,fav:"客",ars_pos:"客队",br:"1.20-1.29",vol:3.4,bf:84,actual:"下盘"},
+  {s:"25-26",d:"08-17",t:"23:30",day:"星期日",home:"曼联",score:"0:1",away:"阿森纳",fo:2.02,hf:false,fav:"客",ars_pos:"客队",br:"1.91-2.20",vol:15.6,bf:77,actual:"上盘"},
+  {s:"25-26",d:"08-31",t:"23:30",day:"星期日",home:"利物浦",score:"1:0",away:"阿森纳",fo:2.50,hf:true,fav:"主",ars_pos:"客队",br:"2.21-3.00",vol:10.8,bf:62,actual:"上盘"},
+  {s:"25-26",d:"09-21",t:"23:30",day:"星期日",home:"阿森纳",score:"1:1",away:"曼城",fo:2.10,hf:true,fav:"主",ars_pos:"主队",br:"1.91-2.20",vol:12.5,bf:69,actual:"下盘"},
+  {s:"25-26",d:"09-28",t:"23:30",day:"星期日",home:"纽卡斯尔",score:"1:2",away:"阿森纳",fo:2.30,hf:false,fav:"客",ars_pos:"客队",br:"2.21-3.00",vol:10.2,bf:73,actual:"上盘"},
+  {s:"25-26",d:"11-24",t:"00:30",day:"星期一",home:"阿森纳",score:"4:1",away:"托特纳姆热刺",fo:1.50,hf:true,fav:"主",ars_pos:"主队",br:"1.48-1.60",vol:13.9,bf:81,actual:"上盘"},
+  {s:"25-26",d:"12-01",t:"00:30",day:"星期一",home:"切尔西",score:"1:1",away:"阿森纳",fo:2.62,hf:false,fav:"客",ars_pos:"客队",br:"2.21-3.00",vol:12.2,bf:57,actual:"下盘"},
+  {s:"25-26",d:"01-26",t:"00:30",day:"星期一",home:"阿森纳",score:"2:3",away:"曼联",fo:1.58,hf:true,fav:"主",ars_pos:"主队",br:"1.48-1.60",vol:9.5,bf:77,actual:"下盘"},
+  {s:"25-26",d:"02-23",t:"00:30",day:"星期一",home:"托特纳姆热刺",score:"1:4",away:"阿森纳",fo:1.44,hf:false,fav:"客",ars_pos:"客队",br:"1.30-1.47",vol:20.7,bf:82,actual:"上盘"},
+  {s:"25-26",d:"03-02",t:"00:30",day:"星期一",home:"阿森纳",score:"2:1",away:"切尔西",fo:1.54,hf:true,fav:"主",ars_pos:"主队",br:"1.48-1.60",vol:15.7,bf:84,actual:"走水"}
+];
+
+// Slot
+DATA.forEach(function(r){ r.slot = r.day.includes('日') ? '周日' : '周一'; });
+
+var filtered = DATA.concat();
+
+function apply() {
+  var fs=document.getElementById('fs').value;
+  var ft=document.getElementById('ft').value;
+  var fp=document.getElementById('fp').value;
+  var ff=document.getElementById('ff').value;
+  var fa=document.getElementById('fa').value;
+  var fb2=document.getElementById('fb2').value;
+  var fbf=document.getElementById('fbf').value;
+  filtered = DATA.filter(function(r){
+    if(fs && r.s!==fs) return false;
+    if(ft && r.slot!==ft) return false;
+    if(fp && r.ars_pos!==fp) return false;
+    if(ff && r.fav!==ff) return false;
+    if(fa && r.actual!==fa) return false;
+    if(fb2 && r.br!==fb2) return false;
+    if(fbf){
+      var v=r.bf;
+      if(fbf==='<50%' && (v<0||v>=50)) return false;
+      if(fbf==='50-65%' && (v<50||v>=65)) return false;
+      if(fbf==='65-75%' && (v<65||v>=75)) return false;
+      if(fbf==='75-85%' && (v<75||v>=85)) return false;
+      if(fbf==='85%+' && v<85) return false;
+    }
+    return true;
+  });
+  render();
+}
+
+// Stats
+function render() {
+  var d=filtered;
+  var t=d.length;
+  var u=d.filter(function(r){return r.actual==='上盘'}).length;
+  var p=d.filter(function(r){return r.actual==='走水'}).length;
+  var h=d.filter(function(r){return r.actual==='赢半'}).length;
+  var w=d.filter(function(r){return r.actual==='下盘'}).length;
+  var v=u+p+h;
+  
+  // Stats bar
+  var sb=document.getElementById('stats-bar');
+  var rate = v>0 ? u*100/v : 0;
+  sb.innerHTML='<div class="si"><div class="sv">'+t+'</div><div class="sl">场次</div></div>'+
+    '<div class="si"><div class="sv" style="color:#16a34a">'+u+'</div><div class="sl">上盘</div></div>'+
+    '<div class="si"><div class="sv" style="color:#ca8a04">'+p+'</div><div class="sl">走水</div></div>'+
+    '<div class="si"><div class="sv" style="color:#2563eb">'+h+'</div><div class="sl">赢半</div></div>'+
+    '<div class="si"><div class="sv" style="color:#dc2626">'+w+'</div><div class="sl">下盘</div></div>'+
+    '<div class="si"><div class="sv" style="color:'+(rate>=50?'#16a34a':'#dc2626')+'">'+rate.toFixed(0)+'%</div><div class="sl">上盘率</div></div>';
+
+  // Charts
+  renderCharts(d);
+
+  // Table
+  var th=document.getElementById('thead');
+  var cols=[{k:'s',l:'赛季'},{k:'d',l:'日期'},{k:'t',l:'时间'},{k:'home',l:'主队'},{k:'score',l:'比分'},{k:'away',l:'客队'},
+    {k:'ars_pos',l:'位置'},{k:'fo',l:'赔率'},{k:'fav',l:'优'},{k:'br',l:'区间'},{k:'vol',l:'成交量'},{k:'bf',l:'必发%'},{k:'actual',l:'结果'}];
+  th.innerHTML = cols.map(function(c){return '<th onclick="sortBy(\''+c.k+'\')">'+c.l+'</th>';}).join('');
+
+  var tb=document.getElementById('tbody');
+  tb.innerHTML = d.map(function(r){
+    var ac=r.actual;
+    var acTag={'上盘':'<span class="tag tup">上盘</span>','走水':'<span class="tag tpush">走水</span>',
+               '赢半':'<span class="tag thalf">赢半</span>','下盘':'<span class="tag tdown">下盘</span>'}[ac]||ac;
+    var arsPos=r.ars_pos==='主队'?'🔴':'⚪';
+    return '<tr><td><span class="st s'+r.s.replace('-','')+'">'+r.s+'</span></td><td>'+r.d+'</td><td>'+r.t+'</td>'+
+      '<td>'+(r.ars_pos==='主队'?'🔴 ':'')+r.home+'</td><td>'+r.score+'</td><td>'+(r.ars_pos==='客队'?'🔴 ':'')+r.away+'</td>'+
+      '<td>'+arsPos+'</td><td>'+r.fo.toFixed(2)+'</td><td>'+r.fav+'</td><td>'+r.br+'</td>'+
+      '<td>'+r.vol.toFixed(1)+'M</td><td>'+r.bf.toFixed(0)+'%</td><td>'+acTag+'</td></tr>';
+  }).join('');
+
+  // Patterns
+  renderPatterns(d);
+}
+
+function renderCharts(d) {
+  var el=document.getElementById('charts');
+  
+  // By odds bracket
+  var brs={};
+  d.forEach(function(r){
+    if(!brs[r.br]) brs[r.br]={t:0,u:0};
+    brs[r.br].t++; if(r.actual==='上盘') brs[r.br].u++;
+  });
+  var brKeys=Object.keys(brs).sort();
+  var brHtml='<div class="chart-box"><div class="ctitle">按赔率区间上盘率</div>';
+  brKeys.forEach(function(k){
+    var s=brs[k]; var p=s.t>0?s.u*100/s.t:0;
+    brHtml+='<div class="bar-container"><div class="bar-label"><span>'+k+'</span><span>'+s.u+'/'+s.t+' ('+p.toFixed(0)+'%)</span></div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+p+'%;background:'+(p>=50?'#16a34a':'#dc2626')+'"></div></div></div>';
+  });
+  brHtml+='</div>';
+  
+  // By BF%
+  var bfss={};
+  d.forEach(function(r){
+    var b=r.bf<50?'<50%':r.bf<65?'50-65%':r.bf<75?'65-75%':r.bf<85?'75-85%':'85%+';
+    if(!bfss[b]) bfss[b]={t:0,u:0};
+    bfss[b].t++; if(r.actual==='上盘') bfss[b].u++;
+  });
+  var bfHtml='<div class="chart-box"><div class="ctitle">按必发比例上盘率</div>';
+  Object.keys(bfss).sort().forEach(function(k){
+    var s=bfss[k]; var p=s.t>0?s.u*100/s.t:0;
+    bfHtml+='<div class="bar-container"><div class="bar-label"><span>'+k+'</span><span>'+s.u+'/'+s.t+' ('+p.toFixed(0)+'%)</span></div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+p+'%;background:'+(p>=50?'#16a34a':'#dc2626')+'"></div></div></div>';
+  });
+  bfHtml+='</div>';
+
+  el.innerHTML=brHtml+bfHtml;
+}
+
+function renderPatterns(d) {
+  var el=document.getElementById('patterns');
+  var t=d.length; if(t===0){el.innerHTML='<div style="color:#64748b;font-size:0.75rem">暂无数据</div>';return;}
+  
+  var u=d.filter(function(r){return r.actual==='上盘'}).length;
+  var p=d.filter(function(r){return r.actual==='走水'}).length;
+  var w=d.filter(function(r){return r.actual==='下盘'}).length;
+  var v=u+p; var rate=v>0?u/v*100:0;
+  
+  var html='';
+  
+  // 主场优势
+  var homeFav=d.filter(function(r){return r.fav==='主'});
+  var hfU=homeFav.filter(function(r){return r.actual==='上盘'}).length;
+  var hfT=homeFav.length; var hfR=hfT>0?hfU/hfT*100:0;
+  
+  // 客场优势
+  var awayFav=d.filter(function(r){return r.fav==='客'});
+  var afU=awayFav.filter(function(r){return r.actual==='上盘'}).length;
+  var afT=awayFav.length; var afR=afT>0?afU/afT*100:0;
+  
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0">';
+  html+='<div class="pattern-box info" style="border-color:#6366f1"><b>主优</b> '+hfT+'场 上盘'+hfU+' '+hfR.toFixed(0)+'%</div>';
+  html+='<div class="pattern-box info" style="border-color:#8b5cf6"><b>客优</b> '+afT+'场 上盘'+afU+' '+afR.toFixed(0)+'%</div>';
+  
+  // 主场作战
+  var home=d.filter(function(r){return r.ars_pos==='主队'});
+  var hmU=home.filter(function(r){return r.actual==='上盘'}).length; var hmT=home.length;
+  var away=d.filter(function(r){return r.ars_pos==='客队'});
+  var awU=away.filter(function(r){return r.actual==='上盘'}).length; var awT=away.length;
+  html+='<div class="pattern-box info" style="border-color:#dc2626"><b>🔴主场</b> '+hmT+'场 上盘'+hmU+' '+(hmT>0?hmU/hmT*100:0).toFixed(0)+'%</div>';
+  html+='<div class="pattern-box info" style="border-color:#475569"><b>⚪客场</b> '+awT+'场 上盘'+awU+' '+(awT>0?awU/awT*100:0).toFixed(0)+'%</div>';
+  
+  // 周末vs周一
+  var sun=d.filter(function(r){return r.slot==='周日'});
+  var suU=sun.filter(function(r){return r.actual==='上盘'}).length; var suT=sun.length;
+  var mon=d.filter(function(r){return r.slot==='周一'});
+  var moU=mon.filter(function(r){return r.actual==='上盘'}).length; var moT=mon.length;
+  html+='<div class="pattern-box info" style="border-color:#6366f1"><b>周日</b> '+suT+'场 上盘'+suU+' '+(suT>0?suU/suT*100:0).toFixed(0)+'%</div>';
+  html+='<div class="pattern-box info" style="border-color:#8b5cf6"><b>周一</b> '+moT+'场 上盘'+moU+' '+(moT>0?moU/moT*100:0).toFixed(0)+'%</div>';
+  html+='</div>';
+
+  // Volume analysis
+  var highVol=d.filter(function(r){return r.vol>15});
+  var hvU=highVol.filter(function(r){return r.actual==='上盘'}).length;
+  var lowVol=d.filter(function(r){return r.vol<=10});
+  var lvU=lowVol.filter(function(r){return r.actual==='上盘'}).length;
+  
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  html+='<div class="pattern-box bad"><b>成交量>15M:</b> '+highVol.length+'场 上盘'+hvU+' '+(highVol.length>0?hvU/highVol.length*100:0).toFixed(0)+'% (大资金=陷阱)</div>';
+  html+='<div class="pattern-box good"><b>成交量≤10M:</b> '+lowVol.length+'场 上盘'+lvU+' '+(lowVol.length>0?lvU/lowVol.length*100:0).toFixed(0)+'% (小盘=纯净)</div>';
+  html+='</div>';
+  
+  el.innerHTML=html;
+}
+
+var sortAsc={};
+function sortBy(key) {
+  sortAsc[key]=!sortAsc[key];
+  filtered.sort(function(a,b){
+    var va=a[key],vb=b[key];
+    if(typeof va==='number') return sortAsc[key]?va-vb:vb-va;
+    return sortAsc[key]?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+  });
+  render();
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
