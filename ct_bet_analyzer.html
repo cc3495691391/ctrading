@@ -10,7 +10,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC",sans-serif;padding:20px 12px 60px}
 .ct{max-width:800px;margin:0 auto}
-.hdr{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.hdr{display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap}
 .hdr h1{font-size:1.2rem;flex:1}
 .hdr .tag{background:#dc2626;color:#fff;font-size:0.55rem;padding:3px 8px;border-radius:6px;font-weight:700;white-space:nowrap}
 .sub{font-size:0.72rem;color:#64748b;margin-bottom:14px}
@@ -50,7 +50,7 @@ body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFo
 <h1>⚽ C神投注分析器</h1>
 <span class="tag">BJ时间 周日23:30/周一0:30</span>
 </div>
-<div class="sub">输入赔率+必发数据 → 基于142场英超历史统计 → 自动判断最佳策略</div>
+<div class="sub">输入赔率+必发 → 基于142场英超+32场阿森纳历史校验统计</div>
 
 <div class="card">
 <h2>📋 输入参数</h2>
@@ -66,7 +66,7 @@ body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div class="detail-box">
-<strong>💡 预计净胜球</strong> —— 不参与评分，仅用于判断盘口结果（上盘/走水/下盘）
+<strong>💡 预计净胜球</strong> — 仅用于判断亚盘结果 (上盘/走水/下盘)，不参与评分
 <div class="r2" style="margin-top:8px">
 <div class="field" style="margin-bottom:0">
 <label>平局赔率（参考）</label>
@@ -106,15 +106,15 @@ body{background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div class="ft">
-数据来源：五大联赛历史库（仅统计BJ时间周日23:30/周一00:30英超）<br>
-2022-23至2025-26 · 共142场 · 盘口规则基于赔率盘口知识体系<br>
-生成于 2026-05-08 02:00 CST · 由庄神生成
+统计基准: BJ时间周日23:30/周一00:30 英超 142场 (2022-23至2025-26)<br>
+阿森纳验证: 32场 准确率基于阈值≤35回避/≥65推荐<br>
+盘口规则: 基于赔率盘口知识体系·生成于2026-05-08 02:00 CST
 </div>
 
 </div>
 
 <script>
-const BG = { '上盘':'#16a34a', '走水':'#ca8a04', '下盘':'#dc2626', '赢半':'#2563eb' };
+var BG = { '上盘':'#16a34a', '走水':'#ca8a04', '下盘':'#dc2626', '赢半':'#2563eb' };
 
 function ahResult(oh, oa, gd) {
   var fo = Math.min(oh, oa);
@@ -128,7 +128,7 @@ function ahResult(oh, oa, gd) {
   return '上盘';
 }
 
-function bracket(fo) {
+function brk(fo) {
   if (fo < 1.20) return '<1.20';
   if (fo <= 1.29) return '1.20-1.29';
   if (fo <= 1.47) return '1.30-1.47';
@@ -139,58 +139,12 @@ function bracket(fo) {
   return '>3.00';
 }
 
-function vlabel(v) {
-  if (v <= 0) return '无数据';
-  if (v < 5) return '<5M (小盘)';
-  if (v < 10) return '5-10M (中盘)';
-  if (v < 15) return '10-15M (活跃)';
-  if (v < 20) return '15-20M (大盘)';
-  return '>20M (超大盘)';
-}
-
-function blabel(p) {
-  if (p <= 0) return '无数据';
-  if (p < 50) return '<50% (冷门区)';
-  if (p < 65) return '50-65% (均衡)';
-  if (p < 75) return '65-75% (温和)';
-  if (p < 85) return '75-85% (热门)';
-  return '85%+ (极度热门)';
-}
-
-var HIST = {
-  home: {
-    '<1.20':   {t:2, u:0, p:0, h:0, d:2, r:0, bf:89.7, v:9.7},
-    '1.20-1.29':{t:5, u:1, p:0, h:2, d:2, r:20, bf:87.9, v:11.3},
-    '1.30-1.47':{t:9, u:4, p:0, h:0, d:5, r:44, bf:83.8, v:15.9},
-    '1.48-1.60':{t:10,u:2, p:5, h:0, d:3, r:20, bf:80.7, v:12.2},
-    '1.61-1.90':{t:16,u:10,p:0, h:0, d:6, r:62, bf:78.7, v:12.7},
-    '1.91-2.20':{t:14,u:9, p:0, h:0, d:5, r:64, bf:69.6, v:12.1},
-    '2.21-3.00':{t:23,u:8, p:0, h:0, d:15,r:34, bf:56.1, v:9.0},
-  },
-  away: {
-    '1.20-1.29':{t:4, u:0, p:0, h:1, d:3, r:0, bf:89.4, v:12.6},
-    '1.30-1.47':{t:6, u:4, p:0, h:0, d:2, r:66, bf:82.7, v:12.9},
-    '1.48-1.60':{t:7, u:4, p:1, h:0, d:2, r:57, bf:80.9, v:12.6},
-    '1.61-1.90':{t:13,u:7, p:0, h:0, d:6, r:53, bf:79.8, v:12.8},
-    '1.91-2.20':{t:12,u:7, p:0, h:0, d:5, r:58, bf:72.5, v:12.9},
-    '2.21-3.00':{t:21,u:10,p:0, h:0, d:11,r:47, bf:59.0, v:8.4},
-  }
-};
-
-var VS = {
-  '<5M':    {r:44, bf:63.2},
-  '5-10M':  {r:44, bf:74.3},
-  '10-15M': {r:55, bf:69.8},
-  '15-20M': {r:52, bf:78.4},
-  '>20M':   {r:20, bf:81.5},
-};
-
-var BS = {
-  '<50%':   {r:40, v:4.4},
-  '50-65%': {r:44, v:10.4},
-  '65-75%': {r:51, v:10.9},
-  '75-85%': {r:53, v:11.1},
-  '85%+':   {r:25, v:18.6},
+// Per-bracket historical rates (ALL 142 EPL matches)
+var BR = {
+  'home_<1.20':0, 'home_1.20-1.29':20, 'home_1.30-1.47':44, 'home_1.48-1.60':20,
+  'home_1.61-1.90':62, 'home_1.91-2.20':64, 'home_2.21-3.00':34,
+  'away_1.20-1.29':0, 'away_1.30-1.47':66, 'away_1.48-1.60':57,
+  'away_1.61-1.90':53, 'away_1.91-2.20':58, 'away_2.21-3.00':47,
 };
 
 document.getElementById('go').onclick = function() {
@@ -208,104 +162,69 @@ document.getElementById('go').onclick = function() {
   var hf = oh < oa;
   var fo = Math.min(oh, oa);
   var fav = hf ? '主队' : '客队';
-  var br = bracket(fo);
+  var br = brk(fo);
   var ah = ahResult(oh, oa, gd);
-  var db = hf ? HIST.home : HIST.away;
-  var hi = db[br];
-  var vl = vlabel(vol);
-  var vs = VS[vl];
-  var bl = blabel(bf);
-  var bs = BS[bl];
+  var key = (hf ? 'home_' : 'away_') + br;
+  var base = BR[key] !== undefined ? BR[key] : 50;
+  
+  var ss = base;
+  if (bf >= 85) ss -= 12;
+  else if (bf >= 75) ss += 5;
+  else if (bf >= 65) ss += 7;
+
+  if (vol > 20) ss -= 12;
+  else if (vol >= 15) ss += 3;
+  else if (vol >= 10) ss += 5;
+  else if (vol > 0 && vol < 5) ss -= 5;
+
+  if (!hf && (br === '1.30-1.47' || br === '1.48-1.60')) ss += 8;
+  if (hf && (br === '1.61-1.90' || br === '1.91-2.20')) ss += 8;
+  if (hf && br === '1.48-1.60') ss -= 10;
+
+  ss = Math.max(0, Math.min(100, ss));
+  
+  var recClass, recText;
+  if (ss >= 65) { recClass = '上盘'; recText = '推荐'; }
+  else if (ss <= 35) { recClass = '下盘'; recText = '回避'; }
+  else { recClass = '走水'; recText = '谨慎'; }
 
   var el = document.getElementById('out');
   var H = '';
-  var ss = 50;
-  var sg = [];
 
-  if (hi) {
-    ss = hi.r;
-    if (bf >= 85) { ss -= 15; sg.push('过热-15'); }
-    else if (bf >= 75) { ss += 3; sg.push('偏好+3'); }
-    else if (bf >= 65) { ss += 5; sg.push('适中+5'); }
-    if (vol > 20) { ss -= 15; sg.push('天量-15'); }
-    else if (vol >= 15) { ss += 2; sg.push('大盘+2'); }
-    else if (vol >= 10) { ss += 3; sg.push('活跃+3'); }
-    else if (vol > 0 && vol < 5) { ss -= 5; sg.push('稀疏-5'); }
-    if (!hf && br === '1.30-1.47') { ss += 8; sg.push('客场深让+8'); }
-    if (hf && (br === '1.61-1.90' || br === '1.91-2.20')) { ss += 5; sg.push('主场中赔+5'); }
-    if (hf && br === '1.48-1.60') { ss -= 10; sg.push('主场陷阱-10'); }
-  }
-  if (br === '1.48-1.60' && gd === 1) { ss -= 10; sg.push('走水风险-10'); }
-
-  ss = Math.max(0, Math.min(100, ss));
-  var rc = ss >= 65 ? '上盘' : (ss >= 40 ? '走水' : '下盘');
-  var rt = ss >= 65 ? '推荐' : (ss >= 40 ? '谨慎' : '回避');
-
-  // Score display
-  H += '<div class="sc"><div class="num" style="color:' + BG[rc] + '">' + ss + '</div>';
+  H += '<div class="sc"><div class="num" style="color:' + BG[recClass] + '">' + ss + '</div>';
   H += '<div class="lbl">综合评分</div>';
-  H += '<span class="bdg" style="background:' + BG[rc] + '">' + rt + ' · 预计盘口: ' + ah + '</span></div>';
+  H += '<span class="bdg" style="background:' + BG[recClass] + '">' + recText + ' · 预计盘口: ' + ah + '</span></div>';
 
-  // Three indicators
-  var ur = hi ? hi.r : 0;
-  var g1c = ur >= 55 ? '#16a34a' : (ur >= 35 ? '#ca8a04' : '#dc2626');
+  var g1c = base >= 50 ? '#16a34a' : (base >= 30 ? '#ca8a04' : '#dc2626');
   H += '<div class="gg">';
-  H += '<div class="gi"><div class="gv" style="color:' + g1c + '">' + ur + '%</div><div class="gl">赔率区间上盘率</div></div>';
-  var g2c = bs ? (bs.r >= 45 ? '#16a34a' : '#dc2626') : '#94a3b8';
-  H += '<div class="gi"><div class="gv" style="color:' + g2c + '">' + (bs ? bs.r + '%' : '?') + '</div><div class="gl">必发区间上盘率</div></div>';
-  var g3c = vs ? (vs.r >= 45 ? '#16a34a' : '#dc2626') : '#94a3b8';
-  H += '<div class="gi"><div class="gv" style="color:' + g3c + '">' + (vs ? vs.r + '%' : '?') + '</div><div class="gl">成交量上盘率</div></div>';
+  H += '<div class="gi"><div class="gv" style="color:' + g1c + '">' + base + '%</div><div class="gl">赔率区间上盘率</div></div>';
+  H += '<div class="gi"><div class="gv" style="color:#16a34a">' + ss +'</div><div class="gl">修正后评分</div></div>';
+  H += '<div class="gi"><div class="gv" style="color:#64748b">' + key.replace('_',' ').replace('home','主').replace('away','客') + '</div><div class="gl">历史区间</div></div>';
   H += '</div>';
 
-  // Bar
-  H += '<div class="bw"><div class="bf" style="width:' + ss + '%;background:' + BG[rc] + '">' + ss + '/100</div></div>';
+  H += '<div class="bw"><div class="bf" style="width:' + ss + '%;background:' + BG[recClass] + '">' + ss + '/100</div></div>';
 
-  // Details
   H += '<div class="dr"><span class="dl">优势方</span><span class="dv">' + fav + ' (赔率 ' + fo.toFixed(2) + ')</span></div>';
-  H += '<div class="dr"><span class="dl">赔率区间</span><span class="dv">' + br + '</span></div>';
   H += '<div class="dr"><span class="dl">预计盘口</span><span class="dv" style="color:' + BG[ah] + '">' + ah + '</span></div>';
-  if (hi) {
-    H += '<div class="dr"><span class="dl">历史同区间(' + hi.t + '场)</span><span class="dv">上盘' + hi.u + ' 走水' + hi.p + ' 赢半' + hi.h + ' 下盘' + hi.d + '</span></div>';
-  }
-  H += '<div class="dr"><span class="dl">必发比例</span><span class="dv">' + bl + (hi ? ' (均' + hi.bf + '%)' : '') + '</span></div>';
-  H += '<div class="dr"><span class="dl">成交量</span><span class="dv">' + vl + (hi ? ' (均' + hi.v.toFixed(1) + 'M)' : '') + '</span></div>';
-  if (sg.length > 0) {
-    H += '<div class="dr"><span class="dl">信号修正</span><span class="dv">' + sg.join(' | ') + '</span></div>';
-  }
-
-  // Warnings
-  if (gd === 1 && br === '1.48-1.60' && hi) {
-    H += '<div class="wn" style="background:#fef9c3;border:1px solid #ca8a04">⚠️ <b>走水预警：</b>赢1球=走水。历史走水率' + Math.round(hi.p/hi.t*100) + '%</div>';
-  }
-  if (bf >= 85) {
-    H += '<div class="wn" style="background:#fee2e2;border:1px solid #dc2626">🚫 <b>过热风险：</b>必发85%+上盘率仅25%。</div>';
-  }
-  if (vol > 20) {
-    H += '<div class="wn" style="background:#fee2e2;border:1px solid #dc2626">🚫 <b>天量成交：</b>>20M上盘率仅20%。</div>';
-  }
-  if (hf && br === '1.48-1.60') {
-    H += '<div class="wn" style="background:#fee2e2;border:1px solid #dc2626">⚠️ <b>主场陷阱：</b>主场优势方+1.48-1.60上盘率仅20%。</div>';
-  }
-  if (!hf && br === '1.30-1.47') {
-    H += '<div class="wn" style="background:#dcfce7;border:1px solid #16a34a">✅ <b>最佳区间：</b>客场优势方+1.30-1.47上盘率66%。</div>';
-  }
-
+  H += '<div class="dr"><span class="dl">必发比例</span><span class="dv">' + (bf > 0 ? bf + '%' : '未填') + '</span></div>';
+  H += '<div class="dr"><span class="dl">成交量</span><span class="dv">' + (vol > 0 ? vol + 'M' : '未填') + '</span></div>';
+  
   // Strategy
   H += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:0.82rem;line-height:1.7"><b>🎯 策略建议</b><br>';
   if (ss >= 65) {
     H += '✅ 可投注。';
-    if (br === '1.48-1.60') H += '赢1球只走水，需赢2球+。';
-    if (!hf) H += '客场优势更稳定。';
-  } else if (ss >= 40) {
-    H += '⚠️ 谨慎。';
-    if (br === '1.48-1.60') H += '一球盘走水风险。';
-    if (bf >= 85) H += '市场过热。';
+    if (br === '1.48-1.60') H += '注意赢1球只走水。';
+    if (!hf) H += '客场优势方更稳定。';
+  } else if (ss > 35) {
+    H += '⚠️ 谨慎。无足够历史数据支撑强烈倾向。';
   } else {
     H += '❌ 不建议投注。';
-    if (hf && br === '1.48-1.60') H += '主场一球陷阱。';
-    if (bf >= 85) H += '过热易爆冷。';
-    if (vol > 20) H += '资金过于集中。';
   }
+  H += '</div>';
+
+  // Accuracy note
+  H += '<div style="margin-top:8px;padding:8px 10px;background:#f1f5f9;border-radius:8px;font-size:0.65rem;color:#64748b">';
+  H += '📊 历史验证(32场阿森纳): 准确率50% — 本工具基于有限样本统计，仅供参考';
   H += '</div>';
 
   el.innerHTML = H;
