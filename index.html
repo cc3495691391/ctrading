@@ -394,7 +394,7 @@ function buildDay(lb,dr,ms){
     var mid=(m.h+"_"+m.a+"_"+m.t).replace(/\s/g,"");
     
     h+='<tr id="tr_'+mid+'">';
-    var lc={'\u82f1\u8d85':'pl','\u897f\u7532':'ll','\u5fb7\u7532':'bl','\u610f\u7532':'sa','\u6cd5\u7532':'l1','\u6b27\u51a0':'cl','\u6b27\u8054\u676f':'el','\u4e16\u754c\u676f':'wc'};var lcls=lc[m.comp]||'';h+='<td class="tbj">'+m.t+'</td><td><span class="ltg '+lcls+'">'+m.comp+'</span></td>';
+    var lc={'英超':'pl','西甲':'ll','德甲':'bl','意甲':'sa','法甲':'l1','欧冠':'cl','欧联杯':'el','世界杯':'wc'};var lcls=lc[m.comp]||'';h+='<td class="tbj">'+m.t+'</td><td><span class="ltg '+lcls+'">'+m.comp+'</span></td>';
     h+='<td class="tmh">'+m.h+'</td><td class="vsc">vs</td><td class="tma">'+m.a+'</td>';
     h+='<td class="oc"><button class="obtn" id="btn_'+mid+'_h" onclick="pick(\''+mid+'\',\'主胜\',\''+m.hD+'\',\''+m.h+'\',\''+m.a+'\',\''+m.t+'\')">'+m.hD+'</button></td>';
     h+='<td class="oc"><button class="obtn" id="btn_'+mid+'_d" onclick="pick(\''+mid+'\',\'平局\',\''+m.dD+'\',\''+m.h+'\',\''+m.a+'\',\''+m.t+'\')">'+m.dD+'</button></td>';
@@ -725,6 +725,129 @@ function renderRptB(){var ts=getTrades().filter(function(t){return t.r}),el=docu
 function renderRptC(){var c=curCap(),b=getCap(),ts=getTrades().filter(function(t){return t.r});var pn=0;ts.forEach(function(t){if(t.r==="win")pn+=t.totalPos*(t.odds-1);else if(t.r==="lose")pn-=t.totalPos});document.getElementById("rptC").innerHTML='<div class="rr"><span class="rl">初始资金</span><span class="rv">¥'+b.toLocaleString()+'</span></div><div class="rr"><span class="rl">累计盈亏</span><span class="rv '+(pn>=0?'green':'bad')+'">'+(pn>=0?'+':'')+'¥'+Math.round(pn).toLocaleString()+'</span></div><div class="rr"><span class="rl" style="font-weight:800;color:var(--text)">当前资金</span><span class="rv green" style="font-size:.95rem">¥'+c.toLocaleString()+'</span></div>';}
 
 (function(){if(!localStorage.getItem("ct_c"))setCap(120000);renderMatches();updCap();upLS();setInterval(updCap,30000);})();
+</script>
+<script>
+// ═══ AUTO-SETTLE: Fetch real match results from ESPN ═══
+function getTodayStr(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
+
+async function settleAllBets(){
+  var btn=document.getElementById("settleBtn");
+  if(btn){btn.disabled=true;btn.textContent="⏳ 结算中...";}
+  try{
+    var trades=getTrades();
+    var unsettled=trades.filter(function(t){return !t.r;});
+    if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="✅ 结算";return;}
+    var leagueIds=["eng.1","esp.1","ger.1","ita.1","fra.1","uefa.champions","uefa.europa","fifa.world"];
+    var todayStr=getTodayStr();
+    var allEvents=[];
+    for(var li=0;li<leagueIds.length;li++){
+      try{
+        var url="https://site.api.espn.com/apis/site/v2/sports/soccer/"+leagueIds[li]+"/scoreboard?dates="+todayStr;
+        var resp=await fetch(url);
+        var data=await resp.json();
+        if(data.events){for(var ei=0;ei<data.events.length;ei++){allEvents.push(data.events[ei]);}}
+      }catch(e){}
+    }
+    var settled=0,failed=[];
+    for(var ti=0;ti<unsettled.length;ti++){
+      var trade=unsettled[ti];
+      var matchName=trade.matchName||"";
+      var parts=matchName.split(/vs|\+|,/);
+      var teamNames=[];
+      for(var pi=0;pi<parts.length;pi++){var tn=parts[pi].trim();if(tn)teamNames.push(tn);}
+      var matched=null;
+      for(var ei=0;ei<allEvents.length;ei++){
+        var evt=allEvents[ei];
+        var comp=evt.competitions?evt.competitions[0]:null;
+        if(!comp)continue;
+        var competitors=comp.competitors||[];
+        var homeTeam="",awayTeam="";
+        for(var ci=0;ci<competitors.length;ci++){
+          var c=competitors[ci];
+          if(c.homeAway==="home")homeTeam=c.team.name;
+          if(c.homeAway==="away")awayTeam=c.team.name;
+        }
+        var completed=comp.status&&comp.status.type&&comp.status.type.completed;
+        if(!completed)continue;
+        var bothFound=teamNames.every(function(tn){
+          return homeTeam.indexOf(tn)>=0||awayTeam.indexOf(tn)>=0||evt.name.indexOf(tn)>=0;
+        });
+        if(bothFound&&teamNames.length>=2){
+          var homeScore=0,awayScore=0;
+          for(var ci=0;ci<competitors.length;ci++){
+            var c=competitors[ci];
+            if(c.homeAway==="home")homeScore=parseInt(c.score)||0;
+            if(c.homeAway==="away")awayScore=parseInt(c.score)||0;
+          }
+          matched={homeTeam:homeTeam,awayTeam:awayTeam,homeScore:homeScore,awayScore:awayScore};
+          break;
+        }
+      }
+      if(!matched){failed.push(matchName||"?");continue;}
+      var result="";
+      if(matched.homeScore>matched.awayScore)result="主胜";
+      else if(matched.homeScore<matched.awayScore)result="客胜";
+      else result="平局";
+      var betDetail=trade.matchDetail||"";
+      var choices=[];
+      var detailParts=betDetail.split(",");
+      for(var di=0;di<detailParts.length;di++){
+        var md=detailParts[di].match(/\(([^)]+)\)/);
+        if(md){
+          var choiceStrs=md[1].split("/");
+          for(var cj=0;cj<choiceStrs.length;cj++){
+            var cp=choiceStrs[cj].split("@");
+            if(cp.length>=2)choices.push({label:cp[0].trim(),odds:parseFloat(cp[1])});
+          }
+        }
+      }
+      if(!choices.length){
+        trade.r=result==="主胜"?"win":"lose";
+        settled++;continue;
+      }
+      var winningChoices=choices.filter(function(c){return c.label===result;});
+      if(winningChoices.length>0){
+        var totalPos=trade.totalPos||trade.pos||0;
+        var stakePerChoice=totalPos/choices.length;
+        var pnl=0;
+        for(var wi=0;wi<winningChoices.length;wi++){pnl+=Math.round(stakePerChoice*(winningChoices[wi].odds-1));}
+        pnl-=Math.round((choices.length-winningChoices.length)*stakePerChoice);
+        trade.r=pnl>=0?"win":"lose";
+        trade.actualPnl=pnl;
+        if(pnl>0){var cap=parseFloat(localStorage.getItem("ct_c")||"120000");localStorage.setItem("ct_c",String(cap+pnl));}
+      }else{
+        trade.r="lose";
+        trade.actualPnl=-(trade.totalPos||trade.pos||0);
+      }
+      trade.settledBy="auto";
+      trade.settleResult=result;
+      settled++;
+    }
+    saveTrades(trades);
+    var msg="✅ 已自动结算 "+settled+" 单";
+    if(failed.length)msg+="\n❌ 未匹配: "+failed.join(", ");
+    alert(msg);
+    updCap();
+    if(typeof renderHistory==='function')renderHistory();
+  }catch(e){
+    alert("结算失败: "+e.message);
+  }
+  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
+}
+
+function addSettleBtn(){
+  var histPanel=document.getElementById("pnHistory");
+  if(!histPanel||document.getElementById("settleBtn"))return;
+  var btn=document.createElement("button");
+  btn.id="settleBtn";
+  btn.textContent="🤖 自动结算";
+  btn.style.cssText="width:100%;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 16px rgba(220,38,38,0.35)";
+  btn.onclick=settleAllBets;
+  var container=histPanel.querySelector("div");
+  if(container)container.appendChild(btn);
+}
+
+(function(){if(document.readyState==="complete"||document.readyState==="interactive"){setTimeout(addSettleBtn,500);}else{document.addEventListener("DOMContentLoaded",function(){setTimeout(addSettleBtn,500);})}})();
 </script>
 </body>
 </html>
