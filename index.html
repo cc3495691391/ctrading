@@ -602,7 +602,7 @@ function runAna(){
   var t=0,fds=[];FACTORS.forEach(function(f){var v=document.getElementById(f.id).value,s=f.opts[v]||0;t+=s;fds.push({n:f.name,v:v,s:s});});
   var sig=t>=6?"force":t>=4?"optional":t===3?"watch":"forbidden";
   var sc=getSC(),es=calcExec(),r=rem(),av=Math.min(r.d,r.w,r.m);
-  var bp={0:0,1:0,2:0,3:1000,4:2000,5:2000,6:3000},pos=bp[t]!==undefined?bp[t]:0;if(pos>av)pos=av;
+  var pos=1000;if(pos>av)pos=av;if(sig==="watch"||sig==="forbidden")pos=0;
   var tb=0;curBetType.combos.forEach(function(c){tb+=c.bets;});
   // Account for multi-selection: total bets = system bets * choice combinations
   var choicePerms = selections.reduce(function(a,s){return a*s.choices.length},1);
