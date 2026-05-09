@@ -639,11 +639,61 @@ function runAna(){
 }
 
 function rec(result){
-  if(!curReport)return;curReport.r=result;
-  if(result==="win"){var p=Math.round(curReport.totalPos*(curReport.odds-1));setCap(getCap()+p);}
+  if(!curReport)return;
+  var matchDetails = curReport.matchDetail || "";
+  // Determine if multi-selection is involved
+  var hasMulti = matchDetails.indexOf("/") >= 0;
+  var actualPnl = 0;
+  if(result==="win"){
+    if(hasMulti){
+      // Multi-selection: ask which outcome(s) won per match
+      var totalPos = curReport.totalPos;
+      var details = matchDetails.split(",");
+      var totalCombos = 1;
+      details.forEach(function(d){var m=d.match(/\(([^)]+)\)/);if(m) totalCombos *= m[1].split("/").length;});
+      var winCombos = 0;
+      details.forEach(function(d){
+        var parts = d.split("(");
+        var matchName = parts[0];
+        var choices = (parts[1]||"").replace(")","").split("/");
+        if(choices.length > 1){
+          var promptMsg = matchName + "\n实际结果是什么？\n输入序号：";
+          choices.forEach(function(c,i){promptMsg += "\n"+(i+1)+". "+c;});
+          var ans = prompt(promptMsg, "1");
+          if(ans) winCombos++;
+        } else {
+          // Single choice for this match - won
+          winCombos++;
+        }
+      });
+      // Calculate: each combo has equal stake
+      var stakePerCombo = totalPos / totalCombos;
+      // Winning combos contribute profit, losing combos lose their stake
+      var winPnl = winCombos * stakePerCombo * (curReport.odds - 1);
+      var losePnl = (totalCombos - winCombos) * stakePerCombo * (-1);
+      actualPnl = Math.round(winPnl + losePnl);
+      setCap(getCap() + actualPnl);
+    } else {
+      // Simple single selection
+      actualPnl = Math.round(curReport.totalPos * (curReport.odds - 1));
+      setCap(getCap() + actualPnl);
+    }
+  } else if(result==="lose"){
+    if(hasMulti){
+      var details=matchDetails.split(",");
+      var tc=1;details.forEach(function(d){var m=d.match(/\(([^)]+)\)/);if(m)tc*=m[1].split("/").length;});
+      actualPnl = -curReport.totalPos;
+      setCap(getCap() + actualPnl);
+    } else {
+      actualPnl = -curReport.totalPos;
+      setCap(getCap() + actualPnl);
+    }
+  } // push: no change
+  curReport.r = result;
+  curReport.actualPnl = actualPnl;
   var ts=getTrades();ts.push(curReport);saveTrades(ts);curReport=null;
   clearAll();document.getElementById("analysisPanel").classList.remove("show");updCap();
-  var l={win:"赢",lose:"亏",push:"走水"}[result];alert("已记录："+l);
+  var labels={win:"赢",lose:"亏",push:"走水"};var extra=actualPnl?" (¥"+actualPnl.toLocaleString()+")":"";alert("已记录："+labels[result]+extra);
 }
 
 function switchP(n){
