@@ -166,10 +166,22 @@ tbody tr.sel-match{background:rgba(220,38,38,0.04)!important}
     <div class="sub" id="hd">📅 加载中...</div>
   </div>
   <div class="status-bar">
-    <div class="status-item"><div class="slabel">总资金</div><div class="sval green" id="sT">¥0</div></div>
-    <div class="status-item"><div class="slabel">今日可用</div><div class="sval" id="sD">¥0</div></div>
-    <div class="status-item"><div class="slabel">本周可用</div><div class="sval" id="sW">¥0</div></div>
-    <div class="status-item"><div class="slabel">本月可用</div><div class="sval" id="sM">¥0</div></div>
+    <div class="status-item" onclick="editCapital('total')" style="cursor:pointer;position:relative" title="点击编辑">
+      <div class="slabel">总资金 <span style="font-size:.5rem;opacity:.5">✎</span></div>
+      <div class="sval green" id="sT">¥0</div>
+    </div>
+    <div class="status-item" onclick="editCapital('day')" style="cursor:pointer;position:relative" title="点击编辑">
+      <div class="slabel">今日可用 <span style="font-size:.5rem;opacity:.5">✎</span></div>
+      <div class="sval" id="sD">¥0</div>
+    </div>
+    <div class="status-item" onclick="editCapital('week')" style="cursor:pointer;position:relative" title="点击编辑">
+      <div class="slabel">本周可用 <span style="font-size:.5rem;opacity:.5">✎</span></div>
+      <div class="sval" id="sW">¥0</div>
+    </div>
+    <div class="status-item" onclick="editCapital('month')" style="cursor:pointer;position:relative" title="点击编辑">
+      <div class="slabel">本月可用 <span style="font-size:.5rem;opacity:.5">✎</span></div>
+      <div class="sval" id="sM">¥0</div>
+    </div>
   </div>
   <div class="block-banner" id="blockBanner">🚫 资金已耗尽，禁止投注</div>
   <div style="display:flex;gap:8px">
@@ -356,7 +368,17 @@ var selCounter = 0; // unique ID for each button
 function getCap(){return parseFloat(localStorage.getItem("ct_c")||"120000")}
 function setCap(v){localStorage.setItem("ct_c",String(v))}
 function curCap(){var b=getCap(),ts=getTrades().filter(function(t){return t.r&&t.r!=="push"}),pn=0;ts.forEach(function(t){if(t.r==="win")pn+=t.totalPos*(t.odds-1);else if(t.r==="lose")pn-=t.totalPos});return Math.max(0,Math.round(b+pn))}
-function getLim(){var c=curCap();return{d:Math.round(c*.05),w:Math.round(c*.25),m:Math.round(c*.5)}}
+function getLim(){
+  var c=curCap();
+  var dayL=localStorage.getItem("ct_dayL");
+  var weekL=localStorage.getItem("ct_weekL");
+  var monthL=localStorage.getItem("ct_monthL");
+  return {
+    d: dayL?parseInt(dayL):Math.round(c*.05),
+    w: weekL?parseInt(weekL):Math.round(c*.25),
+    m: monthL?parseInt(monthL):Math.round(c*.5)
+  };
+}
 function getUse(){var n=new Date(),td=n.toISOString().slice(0,10),ws=new Date(n);ws.setDate(ws.getDate()-((ws.getDay()||7)-1));ws.setHours(0,0,0,0);var ms=new Date(n.getFullYear(),n.getMonth(),1),tr=getTrades(),u={d:0,w:0,m:0};tr.forEach(function(x){if(!x.time||!x.totalPos)return;x.time.startsWith(td)&&(u.d+=Math.round(x.totalPos));x.time>=ws.toISOString()&&(u.w+=Math.round(x.totalPos));x.time>=ms.toISOString()&&(u.m+=Math.round(x.totalPos))});return u}
 function rem(){var l=getLim(),u=getUse();return{d:Math.max(0,l.d-u.d),w:Math.max(0,l.w-u.w),m:Math.max(0,l.m-u.m)}}
 function isBlock(){var r=rem();return r.d<=0||r.w<=0||r.m<=0}
@@ -745,6 +767,36 @@ function renderRptC(){var c=curCap(),b=getCap(),ts=getTrades().filter(function(t
 (function(){if(!localStorage.getItem("ct_c"))setCap(120000);renderMatches();updCap();upLS();setInterval(updCap,30000);})();
 </script>
 <script>
+
+function editCapital(type){
+  var total=parseFloat(localStorage.getItem("ct_c")||"200000");
+  var dayL=parseFloat(localStorage.getItem("ct_dayL")||Math.round(total*0.05));
+  var weekL=parseFloat(localStorage.getItem("ct_weekL")||Math.round(total*0.25));
+  var monthL=parseFloat(localStorage.getItem("ct_monthL")||Math.round(total*0.5));
+  document.getElementById("setTotal").value=total;
+  document.getElementById("setDay").value=dayL;
+  document.getElementById("setWeek").value=weekL;
+  document.getElementById("setMonth").value=monthL;
+  document.getElementById("settingsModal").style.display="flex";
+}
+
+function hideSettings(){
+  document.getElementById("settingsModal").style.display="none";
+}
+
+function saveSettings(){
+  var total=parseInt(document.getElementById("setTotal").value)||200000;
+  var dayL=parseInt(document.getElementById("setDay").value)||10000;
+  var weekL=parseInt(document.getElementById("setWeek").value)||50000;
+  var monthL=parseInt(document.getElementById("setMonth").value)||100000;
+  localStorage.setItem("ct_c",String(total));
+  localStorage.setItem("ct_dayL",String(dayL));
+  localStorage.setItem("ct_weekL",String(weekL));
+  localStorage.setItem("ct_monthL",String(monthL));
+  hideSettings();
+  updCap();
+  alert("设置已保存");
+}
 // ═══ AUTO-SETTLE: Fetch real match results from ESPN ═══
 function resetAllData(){if(!confirm('\u786e\u5b9a\u91cd\u7f6e\u6240\u6709\u6570\u636e\uff1f\n\u5c06\u6e05\u9664\u6240\u6709\u5386\u53f2\u4ea4\u6613\u548c\u8d44\u91d1\u8bb0\u5f55'))return;localStorage.clear();localStorage.setItem('ct_c','200000');alert('\u5df2\u91cd\u7f6e\n\u4eca\u65e5\u53ef\u7528: 10,000\n\u672c\u5468\u53ef\u7528: 50,000\n\u672c\u6708\u53ef\u7528: 100,000');location.reload();}
 function getTodayStr(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
@@ -859,5 +911,25 @@ async function settleAllBets(){
 
 
 </script>
+<!-- Settings Modal -->
+<div id="settingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center" onclick="if(event.target===this)hideSettings()">
+  <div style="background:#fff;border-radius:20px;padding:24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);font-family:inherit" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-size:1rem;font-weight:800;color:#7f1d1d">⚙️ 资金设置</span>
+      <span onclick="hideSettings()" style="color:#999;font-size:1.2rem;cursor:pointer;padding:0 4px">✕</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">总资金</label>
+        <input id="setTotal" type="number" value="200000" min="0" step="10000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
+      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每日限额（今日可用=限额-已用）</label>
+        <input id="setDay" type="number" value="10000" min="0" step="1000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
+      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每周限额（本周可用=限额-已用）</label>
+        <input id="setWeek" type="number" value="50000" min="0" step="5000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
+      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每月限额（本月可用=限额-已用）</label>
+        <input id="setMonth" type="number" value="100000" min="0" step="10000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
+    </div>
+    <button onclick="saveSettings()" style="width:100%;margin-top:16px;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:12px;font-size:.9rem;font-family:inherit;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,0.3)">💾 保存设置</button>
+  </div>
+</div>
 </body>
 </html>
