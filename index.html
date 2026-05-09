@@ -797,139 +797,108 @@ function saveSettings(){
   updCap();
   alert("设置已保存");
 }
-// ═══ AUTO-SETTLE: Fetch real match results from ESPN ═══
-function resetAllData(){if(!confirm('\u786e\u5b9a\u91cd\u7f6e\u6240\u6709\u6570\u636e\uff1f\n\u5c06\u6e05\u9664\u6240\u6709\u5386\u53f2\u4ea4\u6613\u548c\u8d44\u91d1\u8bb0\u5f55'))return;localStorage.clear();localStorage.setItem('ct_c','200000');alert('\u5df2\u91cd\u7f6e\n\u4eca\u65e5\u53ef\u7528: 10,000\n\u672c\u5468\u53ef\u7528: 50,000\n\u672c\u6708\u53ef\u7528: 100,000');location.reload();}
-function getTodayStr(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
 
+// ═══ AUTO-SETTLE: ESPN result checker ═══
 async function settleAllBets(){
   var btn=document.getElementById("settleBtn");
-  if(btn){btn.disabled=true;btn.textContent="⏳ 结算中...";}
+  if(btn){btn.disabled=true;btn.textContent="⏳ 查询赛果中...";}
   try{
     var trades=getTrades();
     var unsettled=trades.filter(function(t){return !t.r;});
-    if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="✅ 结算";return;}
-    var leagueIds=["eng.1","esp.1","ger.1","ita.1","fra.1","uefa.champions","uefa.europa","fifa.world"];
-    var todayStr=getTodayStr();
+    if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="🤖 自动结算";return;}
+    
+    // Fetch from ESPN
+    var leagueIds=["eng.1","esp.1","ger.1","ita.1","fra.1"];
+    var todayStr=new Date().getFullYear()+('0'+(new Date().getMonth()+1)).slice(-2)+('0'+new Date().getDate()).slice(-2);
     var allEvents=[];
+    
     for(var li=0;li<leagueIds.length;li++){
       try{
         var url="https://site.api.espn.com/apis/site/v2/sports/soccer/"+leagueIds[li]+"/scoreboard?dates="+todayStr;
-        var resp=await fetch(url);
+        var resp=await fetch(url, {mode:'cors'});
         var data=await resp.json();
-        if(data.events){for(var ei=0;ei<data.events.length;ei++){allEvents.push(data.events[ei]);}}
-      }catch(e){}
+        if(data.events){
+          for(var ei=0;ei<data.events.length;ei++){
+            allEvents.push(data.events[ei]);
+          }
+        }
+      }catch(e){ console.log("ESPN fetch error: "+leagueIds[li]); }
     }
-    var settled=0,failed=[];
+    
+    if(!allEvents.length){alert("未获取到ESPN数据，请稍后重试");if(btn)btn.textContent="🤖 自动结算";return;}
+    
+    var settled=0,failed=[],msg="";
     for(var ti=0;ti<unsettled.length;ti++){
       var trade=unsettled[ti];
-      var matchName=trade.matchName||"";
-      var parts=matchName.split(/vs|\+|,/);
-      var teamNames=[];
-      for(var pi=0;pi<parts.length;pi++){var tn=parts[pi].trim();if(tn)teamNames.push(tn);}
-      var matched=null;
+      var mn=trade.matchName||"";
+      var teams=mn.split(/vs|\+|,/).map(function(s){return s.trim();}).filter(Boolean);
+      
+      // Find match in ESPN data
+      var match=null;
       for(var ei=0;ei<allEvents.length;ei++){
         var evt=allEvents[ei];
-        var comp=evt.competitions?evt.competitions[0]:null;
-        if(!comp)continue;
-        var competitors=comp.competitors||[];
-        var homeTeam="",awayTeam="";
-        for(var ci=0;ci<competitors.length;ci++){
-          var c=competitors[ci];
-          if(c.homeAway==="home")homeTeam=c.team.name;
-          if(c.homeAway==="away")awayTeam=c.team.name;
+        var comp=evt.competitions&&evt.competitions[0];
+        if(!comp||!comp.status||!comp.status.type||!comp.status.type.completed) continue;
+        var cs=comp.competitors||[];
+        var homeN="",awayN="";
+        for(var ci=0;ci<cs.length;ci++){
+          if(cs[ci].homeAway==="home") homeN=cs[ci].team.name;
+          if(cs[ci].homeAway==="away") awayN=cs[ci].team.name;
         }
-        var completed=comp.status&&comp.status.type&&comp.status.type.completed;
-        if(!completed)continue;
-        var bothFound=teamNames.every(function(tn){
-          return homeTeam.indexOf(tn)>=0||awayTeam.indexOf(tn)>=0||evt.name.indexOf(tn)>=0;
-        });
-        if(bothFound&&teamNames.length>=2){
-          var homeScore=0,awayScore=0;
-          for(var ci=0;ci<competitors.length;ci++){
-            var c=competitors[ci];
-            if(c.homeAway==="home")homeScore=parseInt(c.score)||0;
-            if(c.homeAway==="away")awayScore=parseInt(c.score)||0;
+        var matched=teams.every(function(t){return homeN.indexOf(t)>=0||awayN.indexOf(t)>=0||evt.name.indexOf(t)>=0;});
+        if(matched&&teams.length>=2){
+          var hScore=0,aScore=0;
+          for(var ci=0;ci<cs.length;ci++){
+            if(cs[ci].homeAway==="home") hScore=parseInt(cs[ci].score)||0;
+            if(cs[ci].homeAway==="away") aScore=parseInt(cs[ci].score)||0;
           }
-          matched={homeTeam:homeTeam,awayTeam:awayTeam,homeScore:homeScore,awayScore:awayScore};
+          match={home:homeN,away:awayN,hScore:hScore,aScore:aScore};
           break;
         }
       }
-      if(!matched){failed.push(matchName||"?");continue;}
-      var result="";
-      if(matched.homeScore>matched.awayScore)result="主胜";
-      else if(matched.homeScore<matched.awayScore)result="客胜";
-      else result="平局";
-      var betDetail=trade.matchDetail||"";
+      
+      if(!match){failed.push(mn||"?");continue;}
+      
+      // Determine result
+      var result=match.hScore>match.aScore?"主胜":match.hScore<match.aScore?"客胜":"平局";
+      
+      // Parse choices from matchDetail
+      var detail=trade.matchDetail||"";
       var choices=[];
-      var detailParts=betDetail.split(",");
-      for(var di=0;di<detailParts.length;di++){
-        var md=detailParts[di].match(/\(([^)]+)\)/);
-        if(md){
-          var choiceStrs=md[1].split("/");
-          for(var cj=0;cj<choiceStrs.length;cj++){
-            var cp=choiceStrs[cj].split("@");
-            if(cp.length>=2)choices.push({label:cp[0].trim(),odds:parseFloat(cp[1])});
-          }
-        }
+      var dps=detail.split(",");
+      for(var di=0;di<dps.length;di++){
+        var md=dps[di].match(/\(([^)]+)\)/);
+        if(md){md[1].split("/").forEach(function(cs){
+          var cp=cs.split("@");
+          if(cp.length>=2) choices.push({label:cp[0].trim(),odds:parseFloat(cp[1])});
+        });}
       }
-      if(!choices.length){
-        trade.r=result==="主胜"?"win":"lose";
-        settled++;continue;
-      }
-      var winningChoices=choices.filter(function(c){return c.label===result;});
-      if(winningChoices.length>0){
-        var totalPos=trade.totalPos||trade.pos||0;
-        var stakePerChoice=totalPos/choices.length;
-        var pnl=0;
-        for(var wi=0;wi<winningChoices.length;wi++){pnl+=Math.round(stakePerChoice*(winningChoices[wi].odds-1));}
-        pnl-=Math.round((choices.length-winningChoices.length)*stakePerChoice);
-        trade.r=pnl>=0?"win":"lose";
-        trade.actualPnl=pnl;
-        if(pnl>0){var cap=parseFloat(localStorage.getItem("ct_c")||"120000");localStorage.setItem("ct_c",String(cap+pnl));}
-      }else{
-        trade.r="lose";
-        trade.actualPnl=-(trade.totalPos||trade.pos||0);
-      }
-      trade.settledBy="auto";
-      trade.settleResult=result;
+      
+      if(!choices.length){trade.r=result==="主胜"?"win":"lose";settled++;continue;}
+      
+      var win=choices.filter(function(c){return c.label===result;});
+      var total=trade.totalPos||trade.pos||0;
+      if(win.length>0){
+        var sp=total/choices.length;
+        var pnl=win.reduce(function(s,w){return s+Math.round(sp*(w.odds-1));},0);
+        pnl-=Math.round((choices.length-win.length)*sp);
+        trade.r="win";trade.actualPnl=pnl;
+        if(pnl>0){var cap=parseFloat(localStorage.getItem("ct_c")||"200000");localStorage.setItem("ct_c",String(cap+pnl));}
+      }else{trade.r="lose";trade.actualPnl=-total;}
+      
+      trade.settledBy="auto";trade.settleResult=result;
+      msg+=match.home+" "+match.hScore+"-"+match.aScore+" "+match.away+" → "+result+"\n";
       settled++;
     }
+    
     saveTrades(trades);
-    var msg="✅ 已自动结算 "+settled+" 单";
-    if(failed.length)msg+="\n❌ 未匹配: "+failed.join(", ");
-    alert(msg);
-    updCap();
-    if(typeof renderHistory==='function')renderHistory();
-  }catch(e){
-    alert("结算失败: "+e.message);
-  }
-  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";
-  var resetBtn=document.createElement("button");resetBtn.id="resetBtn";resetBtn.textContent="🔄 重置数据";resetBtn.style.cssText="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px";resetBtn.onclick=resetAllData;container.appendChild(resetBtn);}
+    var alertMsg="✅ 已结算 "+settled+" 单\n"+msg;
+    if(failed.length)alertMsg+="\n❌ 未匹配: "+failed.join(", ");
+    alert(alertMsg);
+    updCap();if(typeof renderHistory==='function')renderHistory();
+  }catch(e){alert("结算失败: "+e.message);}
+  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
 }
 
-
-
-
-</script>
-<!-- Settings Modal -->
-<div id="settingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center" onclick="if(event.target===this)hideSettings()">
-  <div style="background:#fff;border-radius:20px;padding:24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);font-family:inherit" onclick="event.stopPropagation()">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <span style="font-size:1rem;font-weight:800;color:#7f1d1d">⚙️ 资金设置</span>
-      <span onclick="hideSettings()" style="color:#999;font-size:1.2rem;cursor:pointer;padding:0 4px">✕</span>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">总资金</label>
-        <input id="setTotal" type="number" value="200000" min="0" step="10000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
-      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每日限额（今日可用=限额-已用）</label>
-        <input id="setDay" type="number" value="10000" min="0" step="1000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
-      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每周限额（本周可用=限额-已用）</label>
-        <input id="setWeek" type="number" value="50000" min="0" step="5000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
-      <div><label style="font-size:.78rem;color:#666;font-weight:600;display:block;margin-bottom:4px">每月限额（本月可用=限额-已用）</label>
-        <input id="setMonth" type="number" value="100000" min="0" step="10000" style="width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;color:#333;outline:none"></div>
-    </div>
-    <button onclick="saveSettings()" style="width:100%;margin-top:16px;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:12px;font-size:.9rem;font-family:inherit;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,0.3)">💾 保存设置</button>
-  </div>
-</div>
 </body>
 </html>
