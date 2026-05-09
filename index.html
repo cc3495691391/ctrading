@@ -764,10 +764,8 @@ function renderRptA(){var ts=getTrades(),td=new Date().toISOString().slice(0,10)
 function renderRptB(){var ts=getTrades().filter(function(t){return t.r}),el=document.getElementById("rptB");if(!ts.length){el.innerHTML='<div style="padding:6px 0;text-align:center;color:var(--muted)">暂无数据</div>';return}var es=calcExec(),tot=ts.length,win=ts.filter(function(t){return t.r==="win"}).length,los=ts.filter(function(t){return t.r==="lose"}).length,pu=ts.filter(function(t){return t.r==="push"}).length;var ov=(win/tot*100).toFixed(1),l5=ts.slice(-5),l5w=l5.filter(function(t){return t.r==="win"}).length;var l5r=l5.length>=3?(l5w/l5.length*100).toFixed(1)+"%":"—",pn=0;ts.forEach(function(t){if(t.r==="win")pn+=t.totalPos*(t.odds-1);else if(t.r==="lose")pn-=t.totalPos});el.innerHTML='<div class="rr"><span class="rl">执行力分</span><span class="rv '+(es>=80?'green':es>=50?'':'bad')+'">'+(es!==null?es+'分':"—")+'</span></div><div class="rr"><span class="rl">累计交易</span><span class="rv">'+tot+'单</span></div><div class="rr"><span class="rl">累计盈亏</span><span class="rv '+(pn>=0?'green':'bad')+'">'+(pn>=0?'+':'')+'¥'+Math.round(pn).toLocaleString()+'</span></div><div class="rr"><span class="rl">总胜率</span><span class="rv '+(parseFloat(ov)>=50?'green':'bad')+'">'+ov+'% ('+win+'胜 '+los+'负 '+pu+'走水)</span></div><div class="rr"><span class="rl">近5场</span><span class="rv">'+l5r+' ('+l5w+'/'+l5.length+')</span></div>';}
 function renderRptC(){var c=curCap(),b=getCap(),ts=getTrades().filter(function(t){return t.r});var pn=0;ts.forEach(function(t){if(t.r==="win")pn+=t.totalPos*(t.odds-1);else if(t.r==="lose")pn-=t.totalPos});document.getElementById("rptC").innerHTML='<div class="rr"><span class="rl">初始资金</span><span class="rv">¥'+b.toLocaleString()+'</span></div><div class="rr"><span class="rl">累计盈亏</span><span class="rv '+(pn>=0?'green':'bad')+'">'+(pn>=0?'+':'')+'¥'+Math.round(pn).toLocaleString()+'</span></div><div class="rr"><span class="rl" style="font-weight:800;color:var(--text)">当前资金</span><span class="rv green" style="font-size:.95rem">¥'+c.toLocaleString()+'</span></div>';}
 
-(function(){if(!localStorage.getItem("ct_c"))setCap(120000);renderMatches();updCap();upLS();setInterval(updCap,30000);})();
-</script>
-<script>
 
+// Settings modal
 function editCapital(type){
   var total=parseFloat(localStorage.getItem("ct_c")||"200000");
   var dayL=parseFloat(localStorage.getItem("ct_dayL")||Math.round(total*0.05));
@@ -779,11 +777,7 @@ function editCapital(type){
   document.getElementById("setMonth").value=monthL;
   document.getElementById("settingsModal").style.display="flex";
 }
-
-function hideSettings(){
-  document.getElementById("settingsModal").style.display="none";
-}
-
+function hideSettings(){document.getElementById("settingsModal").style.display="none";}
 function saveSettings(){
   var total=parseInt(document.getElementById("setTotal").value)||200000;
   var dayL=parseInt(document.getElementById("setDay").value)||10000;
@@ -793,115 +787,10 @@ function saveSettings(){
   localStorage.setItem("ct_dayL",String(dayL));
   localStorage.setItem("ct_weekL",String(weekL));
   localStorage.setItem("ct_monthL",String(monthL));
-  hideSettings();
-  updCap();
-  alert("设置已保存");
+  hideSettings();updCap();alert("设置已保存");
 }
 
-// ═══ AUTO-SETTLE: ESPN result checker ═══
-async function settleAllBets(){
-  var btn=document.getElementById("settleBtn");
-  if(btn){btn.disabled=true;btn.textContent="⏳ 查询赛果中...";}
-  try{
-    var trades=getTrades();
-    var unsettled=trades.filter(function(t){return !t.r;});
-    if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="🤖 自动结算";return;}
-    
-    // Fetch from ESPN
-    var leagueIds=["eng.1","esp.1","ger.1","ita.1","fra.1"];
-    var todayStr=new Date().getFullYear()+('0'+(new Date().getMonth()+1)).slice(-2)+('0'+new Date().getDate()).slice(-2);
-    var allEvents=[];
-    
-    for(var li=0;li<leagueIds.length;li++){
-      try{
-        var url="https://site.api.espn.com/apis/site/v2/sports/soccer/"+leagueIds[li]+"/scoreboard?dates="+todayStr;
-        var resp=await fetch(url, {mode:'cors'});
-        var data=await resp.json();
-        if(data.events){
-          for(var ei=0;ei<data.events.length;ei++){
-            allEvents.push(data.events[ei]);
-          }
-        }
-      }catch(e){ console.log("ESPN fetch error: "+leagueIds[li]); }
-    }
-    
-    if(!allEvents.length){alert("未获取到ESPN数据，请稍后重试");if(btn)btn.textContent="🤖 自动结算";return;}
-    
-    var settled=0,failed=[],msg="";
-    for(var ti=0;ti<unsettled.length;ti++){
-      var trade=unsettled[ti];
-      var mn=trade.matchName||"";
-      var teams=mn.split(/vs|\+|,/).map(function(s){return s.trim();}).filter(Boolean);
-      
-      // Find match in ESPN data
-      var match=null;
-      for(var ei=0;ei<allEvents.length;ei++){
-        var evt=allEvents[ei];
-        var comp=evt.competitions&&evt.competitions[0];
-        if(!comp||!comp.status||!comp.status.type||!comp.status.type.completed) continue;
-        var cs=comp.competitors||[];
-        var homeN="",awayN="";
-        for(var ci=0;ci<cs.length;ci++){
-          if(cs[ci].homeAway==="home") homeN=cs[ci].team.name;
-          if(cs[ci].homeAway==="away") awayN=cs[ci].team.name;
-        }
-        var matched=teams.every(function(t){return homeN.indexOf(t)>=0||awayN.indexOf(t)>=0||evt.name.indexOf(t)>=0;});
-        if(matched&&teams.length>=2){
-          var hScore=0,aScore=0;
-          for(var ci=0;ci<cs.length;ci++){
-            if(cs[ci].homeAway==="home") hScore=parseInt(cs[ci].score)||0;
-            if(cs[ci].homeAway==="away") aScore=parseInt(cs[ci].score)||0;
-          }
-          match={home:homeN,away:awayN,hScore:hScore,aScore:aScore};
-          break;
-        }
-      }
-      
-      if(!match){failed.push(mn||"?");continue;}
-      
-      // Determine result
-      var result=match.hScore>match.aScore?"主胜":match.hScore<match.aScore?"客胜":"平局";
-      
-      // Parse choices from matchDetail
-      var detail=trade.matchDetail||"";
-      var choices=[];
-      var dps=detail.split(",");
-      for(var di=0;di<dps.length;di++){
-        var md=dps[di].match(/\(([^)]+)\)/);
-        if(md){md[1].split("/").forEach(function(cs){
-          var cp=cs.split("@");
-          if(cp.length>=2) choices.push({label:cp[0].trim(),odds:parseFloat(cp[1])});
-        });}
-      }
-      
-      if(!choices.length){trade.r=result==="主胜"?"win":"lose";settled++;continue;}
-      
-      var win=choices.filter(function(c){return c.label===result;});
-      var total=trade.totalPos||trade.pos||0;
-      if(win.length>0){
-        var sp=total/choices.length;
-        var pnl=win.reduce(function(s,w){return s+Math.round(sp*(w.odds-1));},0);
-        pnl-=Math.round((choices.length-win.length)*sp);
-        trade.r="win";trade.actualPnl=pnl;
-        if(pnl>0){var cap=parseFloat(localStorage.getItem("ct_c")||"200000");localStorage.setItem("ct_c",String(cap+pnl));}
-      }else{trade.r="lose";trade.actualPnl=-total;}
-      
-      trade.settledBy="auto";trade.settleResult=result;
-      msg+=match.home+" "+match.hScore+"-"+match.aScore+" "+match.away+" → "+result+"\n";
-      settled++;
-    }
-    
-    saveTrades(trades);
-    var alertMsg="✅ 已结算 "+settled+" 单\n"+msg;
-    if(failed.length)alertMsg+="\n❌ 未匹配: "+failed.join(", ");
-    alert(alertMsg);
-    updCap();if(typeof renderHistory==='function')renderHistory();
-  }catch(e){alert("结算失败: "+e.message);}
-  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
-}
-
-<script>
-// EXPORT trades for manual settlement
+// Export trades
 function exportTrades(){
   var trades=getTrades();
   var unsettled=trades.filter(function(t){return !t.r;});
@@ -914,6 +803,18 @@ function exportTrades(){
   a.click();
   alert("已导出 "+unsettled.length+" 单待结算投注\n请把文件发给庄神来结算");
 }
+
+// Reset
+function resetAllData(){
+  if(!confirm("确定重置所有数据？将清除所有历史交易和资金记录"))return;
+  localStorage.clear();
+  localStorage.setItem("ct_c","200000");
+  alert("已重置\n今日可用: 10,000\n本周可用: 50,000\n本月可用: 100,000");
+  location.reload();
+}
+
+(function(){if(!localStorage.getItem("ct_c"))setCap(120000);renderMatches();updCap();upLS();setInterval(updCap,30000);})();
 </script>
+
 </body>
 </html>
