@@ -394,7 +394,7 @@ function buildDay(lb,dr,ms){
     var mid=(m.h+"_"+m.a+"_"+m.t).replace(/\s/g,"");
     
     h+='<tr id="tr_'+mid+'">';
-    var lc={'\u82f1\u8d85':'pl','\u897f\u7532':'ll','\u5fb7\u7532':'bl','\u610f\u7532':'sa','\u6cd5\u7532':'l1','\u6b27\u51a0':'cl','\u6b27\u8054\u676f':'el','\u4e16\u754c\u676f':'wc'};var lcls=lc[m.comp]||'';h+='<td class="tbj">'+m.t+'</td><td><span class="ltg '+lcls+'">'+m.comp+'</span></td>';
+    var lc={'英超':'pl','西甲':'ll','德甲':'bl','意甲':'sa','法甲':'l1','欧冠':'cl','欧联杯':'el','世界杯':'wc'};var lcls=lc[m.comp]||'';h+='<td class="tbj">'+m.t+'</td><td><span class="ltg '+lcls+'">'+m.comp+'</span></td>';
     h+='<td class="tmh">'+m.h+'</td><td class="vsc">vs</td><td class="tma">'+m.a+'</td>';
     h+='<td class="oc"><button class="obtn" id="btn_'+mid+'_h" onclick="pick(\''+mid+'\',\'主胜\',\''+m.hD+'\',\''+m.h+'\',\''+m.a+'\',\''+m.t+'\')">'+m.hD+'</button></td>';
     h+='<td class="oc"><button class="obtn" id="btn_'+mid+'_d" onclick="pick(\''+mid+'\',\'平局\',\''+m.dD+'\',\''+m.h+'\',\''+m.a+'\',\''+m.t+'\')">'+m.dD+'</button></td>';
