@@ -274,6 +274,8 @@ tbody tr.sel-match{background:rgba(220,38,38,0.04)!important}
     <div style="background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)">
       <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📜 交易历史</div>
       <div style="overflow-x:auto"><table class="hstb"><thead><tr><th>时间</th><th>比赛</th><th>方式</th><th>评分</th><th>信号</th><th>仓位</th><th>盈亏</th></tr></thead><tbody id="histBody"></tbody></table></div>
+      <button id="settleBtn" onclick="settleAllBets()" style="width:100%;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 16px rgba(220,38,38,0.35)">🤖 自动结算</button>
+      <button id="resetBtn" onclick="resetAllData()" style="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px">🔄 重置数据</button>
     </div>
   </div>
 
@@ -852,20 +854,9 @@ async function settleAllBets(){
   var resetBtn=document.createElement("button");resetBtn.id="resetBtn";resetBtn.textContent="🔄 重置数据";resetBtn.style.cssText="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px";resetBtn.onclick=resetAllData;container.appendChild(resetBtn);}
 }
 
-function addSettleBtn(){
-  var histPanel=document.getElementById("pnHistory");
-  if(!histPanel||document.getElementById("settleBtn"))return;
-  var btn=document.createElement("button");
-  btn.id="settleBtn";
-  btn.textContent="🤖 自动结算";
-  var resetBtn=document.createElement("button");resetBtn.id="resetBtn";resetBtn.textContent="🔄 重置数据";resetBtn.style.cssText="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px";resetBtn.onclick=resetAllData;container.appendChild(resetBtn);
-  btn.style.cssText="width:100%;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 16px rgba(220,38,38,0.35)";
-  btn.onclick=settleAllBets;
-  var container=histPanel.querySelector("div");
-  if(container)container.appendChild(btn);
-}
 
-(function(){if(document.readyState==="complete"||document.readyState==="interactive"){setTimeout(addSettleBtn,500);}else{document.addEventListener("DOMContentLoaded",function(){setTimeout(addSettleBtn,500);})}})();
+
+
 </script>
 </body>
 </html>
