@@ -900,5 +900,20 @@ async function settleAllBets(){
   if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
 }
 
+<script>
+// EXPORT trades for manual settlement
+function exportTrades(){
+  var trades=getTrades();
+  var unsettled=trades.filter(function(t){return !t.r;});
+  if(!unsettled.length){alert("没有待结算的投注");return;}
+  var data=JSON.stringify(unsettled,null,2);
+  var blob=new Blob([data],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="trades_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+  alert("已导出 "+unsettled.length+" 单待结算投注\n请把文件发给庄神来结算");
+}
+</script>
 </body>
 </html>
