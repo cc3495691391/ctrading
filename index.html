@@ -205,7 +205,11 @@ tbody tr.sel-match{background:rgba(220,38,38,0.04)!important}
     <div class="trade-panel" id="tradePanel">
       <div class="tp-title">🎯 投注方式</div>
       <div class="bet-type-area" id="betTypeArea"></div>
-      <hr class="tp-divider">
+      <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+      <span style="font-size:.72rem;color:#b91c1c;font-weight:600;white-space:nowrap">投注金额</span>
+      <input id="betAmount" type="number" value="1000" min="100" step="100" style="flex:1;background:rgba(0,0,0,0.03);border:1.5px solid rgba(0,0,0,0.08);border-radius:10px;padding:8px 12px;font-size:.85rem;font-family:inherit;color:#7f1d1d;outline:none" onchange="updateBetSummary()">
+    </div>
+    <hr class="tp-divider">
       <div class="tp-summary">
         <span>已选：<span class="tp-val" id="selN">0</span> 场</span>
         <span>方式：<span class="tp-val" id="selType">—</span></span>
@@ -547,13 +551,18 @@ function pickBetType(idx){
   updateSummary();
 }
 
-function updateSummary(){
+function updateBetSummary(){
   if(!selections.length||!curBetType){document.getElementById("selType").textContent=curBetType?curBetType.label:"—";document.getElementById("selBets").textContent="—";document.getElementById("selCombined").textContent="—";return;}
   document.getElementById("selType").textContent=curBetType.label;
   var tb=0;curBetType.combos.forEach(function(c){tb+=c.bets});
   document.getElementById("selBets").textContent=tb+"注";
-  document.getElementById("selCombined").textContent="见分析";
+  var amt=getBetAmt();
+  var choicePerms=selections.reduce(function(a,s){return a*s.choices.length},1);
+  var totalBets=tb*choicePerms;
+  document.getElementById("selCombined").textContent="¥"+(amt*totalBets).toLocaleString()+" (¥"+amt+"×"+totalBets+"注)";
 }
+function updateSummary(){updateBetSummary();}
+function getBetAmt(){return parseInt(document.getElementById("betAmount").value)||1000;}
 
 // ═══ GO TO ANALYSIS ═══
 function calcCombinedOdds(){
@@ -588,8 +597,10 @@ function goToAnalysis(){
     var choices = s.choices.map(function(c){return c.label+"@"+c.odds}).join("/");
     return s.match+"("+choices+")";
   }).join(" + ");
-  info.innerHTML='<span class="abi-l">方式：</span><span class="abi-v">'+curBetType.label+'</span>'+
+  var amt2=getBetAmt();
+    info.innerHTML='<span class="abi-l">方式：</span><span class="abi-v">'+curBetType.label+'</span>'+
     '<span class="abi-l">注数：</span><span class="abi-v">'+tb+'注</span>'+
+    '<span class="abi-l">每注：</span><span class="abi-v">¥'+amt2.toLocaleString()+'</span>'+
     '<span class="abi-l">场次：</span><span class="abi-v" style="font-size:.68rem">'+matchList+'</span>';
   document.getElementById("betTypeArea").innerHTML='<span style="color:#4fc;font-size:.8rem">'+curBetType.label+' · '+tb+'注</span>';
   document.getElementById("ar").classList.remove("show");
@@ -600,9 +611,9 @@ function upLS(){var t=0;FACTORS.forEach(function(f){t+=f.opts[document.getElemen
 function runAna(){
   if(isBlock()){alert("资金不足");return}
   var t=0,fds=[];FACTORS.forEach(function(f){var v=document.getElementById(f.id).value,s=f.opts[v]||0;t+=s;fds.push({n:f.name,v:v,s:s});});
-  var sig=t>=6?"force":t>=4?"optional":t===3?"watch":"forbidden";
+  var sig=t>=4?"force":"forbidden";
   var sc=getSC(),es=calcExec(),r=rem(),av=Math.min(r.d,r.w,r.m);
-  var pos=1000;if(pos>av)pos=av;if(sig==="watch"||sig==="forbidden")pos=0;
+  var amt=getBetAmt();var pos=sig==="forbidden"?0:amt;if(pos>av)pos=av;
   var tb=0;curBetType.combos.forEach(function(c){tb+=c.bets;});
   // Account for multi-selection: total bets = system bets * choice combinations
   var choicePerms = selections.reduce(function(a,s){return a*s.choices.length},1);
@@ -613,8 +624,8 @@ function runAna(){
 
   var ar=document.getElementById("ar");ar.classList.add("show");
   document.getElementById("arS").textContent=t;document.getElementById("arS").className="ar-score "+sig;
-  document.getElementById("arB").textContent={force:"强制",optional:"可下",watch:"观察",forbidden:"禁止"}[sig];
-  document.getElementById("arB").className="ar-badge "+sig;
+  document.getElementById("arB").textContent=sig==="force"?"✅ 可投注":"🚫 禁止投注";
+  document.getElementById("arB").className="ar-badge "+(sig==="force"?"force":"forbidden");
   document.getElementById("arF").innerHTML=fds.map(function(fd){
     return '<div class="ar-detail"><span>'+fd.n+' &middot; '+fd.v+'</span><span style="color:'+(fd.s>0?'#16a34a':fd.s<0?'#dc2626':'#7a8a9a')+'">'+(fd.s>=0?"+":"")+fd.s+'</span></div>';
   }).join("");
@@ -625,14 +636,14 @@ function runAna(){
   document.getElementById("arTotal").textContent=pos>0?"¥"+totalPos.toLocaleString()+" (共"+totalBets+"注":"不投入";
 
   var d=document.getElementById("arD");
-  if(pos<=0){d.textContent="不投入（"+t+"分）";d.className="ar-decision no";}
+  if(pos<=0){d.textContent="🚫 评分"+t+"分，禁止投注";d.className="ar-decision no";}
   else{
     var netOdds = combOdds.toFixed(2);
-    d.textContent="每注 "+pos.toLocaleString()+" x "+totalBets+"注 = "+totalPos.toLocaleString()+"（综合 "+netOdds+"）";
+    d.textContent="✅ 每注 ¥"+pos.toLocaleString()+" x "+totalBets+"注 = ¥"+totalPos.toLocaleString()+" | 综合赔率 "+netOdds;
     d.className="ar-decision exec";
   }
   var ra=document.getElementById("arRA");
-  if(pos>0){ra.style.display="block";document.getElementById("arProfit").textContent="单注可赢 ¥"+Math.round(pos*combOdds).toLocaleString();}else ra.style.display="none";
+  if(pos>0){ra.style.display="block";document.getElementById("arProfit").textContent="每注 ¥"+pos.toLocaleString()+" 可赢 ¥"+Math.round(pos*combOdds).toLocaleString();}else ra.style.display="none";
 
   curReport={time:new Date().toISOString(),betType:curBetType.label,matchName:selections.map(function(s){return s.match}).join(" + "),odds:combOdds,total:t,signal:sig,pos:pos,bets:totalBets,totalPos:totalPos,esAt:es,r:null,matchDetail:selections.map(function(s){return s.match+"("+s.choices.map(function(c){return c.label+"@"+c.odds}).join("/")+")"}).join(",")};
   // Save as pending trade immediately to lock funds
