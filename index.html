@@ -286,8 +286,15 @@ tbody tr.sel-match{background:rgba(220,38,38,0.04)!important}
     <div style="background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)">
       <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📜 交易历史</div>
       <div style="overflow-x:auto"><table class="hstb"><thead><tr><th>时间</th><th>比赛</th><th>方式</th><th>评分</th><th>信号</th><th>仓位</th><th>盈亏</th></tr></thead><tbody id="histBody"></tbody></table></div>
-      <button onclick="exportTrades()" style="width:100%;background:#2563eb;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:8px">📤 导出投注数据给庄神结算</button>
-      <button id="resetBtn" onclick="resetAllData()" style="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px">🔄 重置数据</button>
+      
+      <button id="resetBtn" onclick="resetAllData()" style="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px">🔄 重置数据<div style="display:flex;gap:6px;margin-top:8px">
+  <button id="settleBtn" onclick="autoSettle()" style="flex:1;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,0.35)">🤖 自动结算</button>
+  <button onclick="exportTrades()" style="background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px 14px;font-size:.78rem;font-family:inherit;font-weight:600;cursor:pointer">📤</button>
+</div>
+    </div>
+  </div>
+
+  <div class="panel-sec" id="pnReport"></button>
     </div>
   </div>
 
@@ -791,6 +798,42 @@ function saveSettings(){
 }
 
 // Export trades
+
+// AUTO-SETTLE with local server fallback
+async function autoSettle(){
+  var btn=document.getElementById("settleBtn");
+  if(btn){btn.disabled=true;btn.textContent="⏳ 结算中...";}
+  try{
+    var trades=getTrades();
+    var unsettled=trades.filter(function(t){return !t.r;});
+    if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="🤖 自动结算";return;}
+    var data=JSON.stringify(unsettled);
+    var result=null;
+    // Try local server first
+    try{
+      var resp=await fetch("http://localhost:9999",{method:"POST",body:data,headers:{"Content-Type":"application/json"}});
+      if(resp.ok)result=await resp.json();
+    }catch(e){}
+    if(!result){
+      // Fall back to ESPN directly
+      try{
+        var leagueIds=["eng.1","esp.1","ger.1","ita.1","fra.1"];
+        var ts=new Date().getFullYear()+(""+(new Date().getMonth()+1)).slice(-2)+""+new Date().getDate();
+        var allEvents=[];
+        for(var li=0;li<leagueIds.length;li++){
+          try{
+            var r2=await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/"+leagueIds[li]+"/scoreboard?dates="+ts);
+            var d=await r2.json();if(d.events){for(var ei=0;ei<d.events.length;ei++)allEvents.push(d.events[ei]);}
+          }catch(e2){}
+        }
+        if(allEvents.length)result={scores:allEvents,results:null};
+      }catch(e){}
+    }
+    if(!result){alert("无法连接结算服务器\n请运行: python3 settle_server.py\n或用导出按钮发文件给庄神");if(btn)btn.textContent="🤖 自动结算";return;}
+    alert("🎉 结算成功！"+result.results.length+" 单已处理");
+    if(btn)btn.textContent="🤖 自动结算";
+  }catch(e){alert("结算失败: "+e.message);if(btn)btn.textContent="🤖 自动结算";}
+}
 function exportTrades(){
   var trades=getTrades();
   var unsettled=trades.filter(function(t){return !t.r;});
