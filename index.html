@@ -802,53 +802,158 @@ function saveSettings(){
 // AUTO-SETTLE with local server fallback
 
 // AUTO-SETTLE: paste JSON results from local server
+
+// ═══ FULLY AUTOMATED SETTLE (ESPN API, no server needed) ═══
+var TEAM_MAP = {"利物浦": "Liverpool", "切尔西": "Chelsea", "布莱顿": "Brighton", "狼队": "Wolves", "富勒姆": "Fulham", "伯恩茅斯": "Bournemouth", "桑德兰": "Sunderland", "曼联": "Man United", "曼城": "Man City", "布伦特福德": "Brentford", "伯恩利": "Burnley", "阿斯顿维拉": "Aston Villa", "水晶宫": "Crystal Palace", "埃弗顿": "Everton", "诺丁汉森林": "Nott'm Forest", "纽卡斯尔联": "Newcastle", "西汉姆联": "West Ham", "阿森纳": "Arsenal", "埃尔切": "Elche", "阿拉维斯": "Alavés", "塞维利亚": "Sevilla", "西班牙人": "Espanyol", "马德里竞技": "Atlético Madrid", "塞尔塔": "Celta", "皇家社会": "Real Sociedad", "皇家贝蒂斯": "Real Betis", "马略卡": "Mallorca", "比利亚雷亚尔": "Villarreal", "毕尔巴鄂竞技": "Athletic Club", "瓦伦西亚": "Valencia", "奥维耶多": "Oviedo", "赫塔费": "Getafe", "巴塞罗那": "Barcelona", "皇家马德里": "Real Madrid", "奥格斯堡": "Augsburg", "门兴": "Gladbach", "莱比锡红牛": "RB Leipzig", "圣保利": "St. Pauli", "霍芬海姆": "Hoffenheim", "不莱梅": "Bremen", "斯图加特": "Stuttgart", "勒沃库森": "Leverkusen", "沃尔夫斯堡": "Wolfsburg", "拜仁慕尼黑": "Bayern", "汉堡": "Hamburg", "弗赖堡": "Freiburg", "科隆": "Cologne", "海登海姆": "Heidenheim", "美因茨": "Mainz", "柏林联合": "Union Berlin", "卡利亚里": "Cagliari", "乌迪内斯": "Udinese", "拉齐奥": "Lazio", "国际米兰": "Inter", "莱切": "Lecce", "尤文图斯": "Juventus", "维罗纳": "Verona", "科莫": "Como", "克雷莫纳": "Cremonese", "比萨": "Pisa", "佛罗伦萨": "Fiorentina", "热那亚": "Genoa", "帕尔马": "Parma", "罗马": "Roma", "AC米兰": "AC Milan", "亚特兰大": "Atalanta", "欧塞尔": "Auxerre", "尼斯": "Nice", "昂热": "Angers", "斯特拉斯堡": "Strasbourg", "摩纳哥": "Monaco", "里尔": "Lille", "勒阿弗尔": "Le Havre", "马赛": "Marseille", "梅斯": "Metz", "洛里昂": "Lorient", "巴黎圣日耳曼": "PSG", "布雷斯特": "Brest", "雷恩": "Rennes", "巴黎FC": "Paris FC", "图卢兹": "Toulouse", "里昂": "Lyon"};
+
+function cnToEn(name){
+  return TEAM_MAP[name]||name;
+}
+
+function splitMatch(str){
+  return str.split(/\s*\+\s*/).map(function(s){return s.trim();}).filter(Boolean);
+}
+
+function matchScore(im, scores){
+  var parts=im.split(/\s*vs\s*/);
+  if(parts.length<2)return null;
+  var en1=cnToEn(parts[0].trim()), en2=cnToEn(parts[1].trim());
+  for(var i=0;i<scores.length;i++){
+    var s=scores[i];
+    if((s.home.indexOf(en1)>=0||s.name.indexOf(en1)>=0)&&(s.away.indexOf(en2)>=0||s.name.indexOf(en2)>=0))
+      return s;
+  }
+  return null;
+}
+
+function parseChoices(detail){
+  var map={};
+  detail.split(",").forEach(function(dp){
+    var m=dp.match(/([^(]+)\(([^)]+)\)/);
+    if(m){
+      var cs=[];
+      m[2].split("/").forEach(function(c){var p=c.split("@");if(p.length>=2)cs.push({label:p[0].trim(),odds:parseFloat(p[1])});});
+      if(cs.length)map[m[1].trim()]=cs;
+    }
+  });
+  return map;
+}
+
 async function autoSettle(){
   var btn=document.getElementById("settleBtn");
-  if(btn){btn.disabled=true;btn.textContent="⏳ 导出中...";}
+  if(btn){btn.disabled=true;btn.textContent="⏳ 查询ESPN赛果...";}
   try{
     var trades=getTrades();
-    var unsettled=[];
-    for(var ti=0;ti<trades.length;ti++){if(!trades[ti].r)unsettled.push(trades[ti]);}
+    var unsettled=trades.filter(function(t){return !t.r;});
     if(!unsettled.length){alert("没有待结算的投注");if(btn)btn.textContent="🤖 自动结算";return;}
-    // Export data as JSON file for local processing
-    var data=JSON.stringify(unsettled,null,2);
-    var blob=new Blob([data],{type:"application/json"});
-    var a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download="trades_export.json";
-    a.click();
-    // Show instructions
-    var inst="📋 已导出待结算投注数据\n\n请在终端运行：\npython3 ~/.openclaw/workspace/settle_file.py\n\n然后把生成的 trades_result.json 内容发给我，我帮你写入。\n\n或者直接把文件内容粘贴到下面这个输入框";
-    var resultStr=prompt(inst+"\n\n（把结算结果JSON粘贴到这里直接生效）");
-    if(resultStr&&resultStr.trim()){
+    
+    // Fetch from ESPN
+    var leagues=["eng.1","esp.1","ger.1","ita.1","fra.1"];
+    var ds=new Date();
+    var ts=ds.getFullYear()+("0"+(ds.getMonth()+1)).slice(-2)+("0"+ds.getDate()).slice(-2);
+    var allEvents=[];
+    
+    for(var li=0;li<leagues.length;li++){
       try{
-        var results=JSON.parse(resultStr);
-        var cap=parseFloat(localStorage.getItem("ct_c")||"200000");
-        var totalPnl=0;var settled=0;
-        for(var ri=0;ri<results.length;ri++){
-          var r=results[ri];
-          if(r.status!=="done")continue;
-          for(var ti=0;ti<trades.length;ti++){
-            if(!trades[ti].r&&trades[ti].matchName===r.matchName){
-              trades[ti].r=r.won?"win":"lose";
-              trades[ti].actualPnl=r.pnl;
-              trades[ti].settledBy="auto";
-              cap+=r.pnl;totalPnl+=r.pnl;settled++;
-              break;
-            }
-          }
-        }
-        if(settled>0){
-          localStorage.setItem("ct_c",String(cap));
-          saveTrades(trades);updCap();
-          if(typeof renderHistory==='function')renderHistory();
-          alert("✅ 已结算 "+settled+" 单 | 总盈亏: "+(totalPnl>=0?"+":"")+totalPnl);
-        } else alert("⚠️ 没有可结算的记录");
-      }catch(e){alert("JSON解析失败: "+e.message);}
+        var url="https://site.api.espn.com/apis/site/v2/sports/soccer/"+leagues[li]+"/scoreboard?dates="+ts;
+        var resp=await fetch(url,{mode:"cors"});
+        var data=await resp.json();
+        if(data.events){for(var ei=0;ei<data.events.length;ei++)allEvents.push(data.events[ei]);}
+      }catch(e){}
     }
-  }catch(e){alert("导出失败: "+e.message);}
+    
+    // Convert ESPN events to scores
+    var scores=[];
+    for(var ei=0;ei<allEvents.length;ei++){
+      var evt=allEvents[ei];
+      var comp=evt.competitions&&evt.competitions[0];
+      if(!comp||!comp.status||!comp.status.type||!comp.status.type.completed)continue;
+      var cs=comp.competitors||[];
+      var home=cs.find(function(c){return c.homeAway==="home";});
+      var away=cs.find(function(c){return c.homeAway==="away";});
+      if(home&&away){
+        scores.push({
+          id:evt.id,name:evt.name,
+          home:home.team.name, away:away.team.name,
+          homeScore:parseInt(home.score)||0, awayScore:parseInt(away.score)||0
+        });
+      }
+    }
+    
+    if(!scores.length){alert("ESPN暂无已结束比赛数据");if(btn)btn.textContent="🤖 自动结算";return;}
+    
+    // Settle each trade
+    var cap=parseFloat(localStorage.getItem("ct_c")||"200000");
+    var settled=0,totalPnl=0,msgs=[];
+    
+    for(var ti=0;ti<trades.length;ti++){
+      var t=trades[ti];
+      if(t.r)continue;
+      var mn=t.matchName||"";
+      var individuals=splitMatch(mn);
+      var choices=parseChoices(t.matchDetail||"");
+      var matchScores=[];
+      var allDone=true;
+      
+      for(var mi=0;mi<individuals.length;mi++){
+        var im=individuals[mi];
+        var sc=matchScore(im,scores);
+        if(sc){
+          var result=sc.homeScore>sc.awayScore?"主胜":sc.homeScore<sc.awayScore?"客胜":"平局";
+          matchScores.push({match:im,result:result,score:sc.homeScore+"-"+sc.awayScore,home:sc.home,away:sc.away});
+        }else{
+          allDone=false;
+          matchScores.push({match:im,result:"⏳",score:"?"});
+        }
+      }
+      
+      if(!allDone){t.settleStatus="pending";continue;}
+      
+      // All matches done - determine win/loss
+      var won=true;
+      for(var mi=0;mi<matchScores.length;mi++){
+        var ms=matchScores[mi];
+        var ch=choices[ms.match]||[];
+        if(!ch.some(function(c){return c.label===ms.result;})){won=false;break;}
+      }
+      
+      var totalPos=t.totalPos||t.pos||0;
+      var bt=t.betType||"";
+      
+      if(bt.indexOf("串1")>=0||bt==="单关"){
+        // 串1 or single: all must win
+        var pnl=won?Math.round(totalPos*(t.odds-1)):-totalPos;
+        t.r=won?"win":"lose";
+        t.actualPnl=pnl;
+        t.settledBy="auto";
+        cap+=pnl;totalPnl+=pnl;settled++;
+        var label=won?"✅":"❌";
+        msgs.push(label+" "+mn+" | "+(pnl>=0?"+":"")+pnl);
+        for(var mi=0;mi<matchScores.length;mi++){
+          var ms=matchScores[mi];
+          var ch=choices[ms.match]||[];
+          var hit=ch.some(function(c){return c.label===ms.result;});
+          msgs.push("  "+(hit?"✓":"✗")+" "+ms.home+" "+ms.score+" "+ms.away+" → "+ms.result);
+        }
+      }else{
+        // System bets: mark as pending for manual
+        t.settleStatus="system_pending";
+      }
+    }
+    
+    localStorage.setItem("ct_c",String(Math.max(cap,0)));
+    saveTrades(trades);
+    updCap();
+    if(typeof renderHistory==='function')renderHistory();
+    
+    var alertMsg="";
+    if(settled>0)alertMsg="🎉 自动结算 "+settled+" 单 | 总盈亏: "+(totalPnl>=0?"+":"")+totalPnl+"\n\n"+msgs.join("\n");
+    else alertMsg="⚠️ 没有可以结算的投注（比赛未结束或系统过关需手动）";
+    alert(alertMsg);
+  }catch(e){alert("结算失败: "+e.message);}
   if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
 }
+
 
 function exportTrades(){
   var trades=getTrades();
