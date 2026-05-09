@@ -289,7 +289,6 @@ tbody tr.sel-match{background:rgba(220,38,38,0.04)!important}
     </div>
   </div>
 </div>
-<span style="float:right;cursor:pointer;color:#b91c1c;font-size:.72rem;opacity:.7" onclick="localStorage.clear();localStorage.setItem('ct_c','200000');alert('已重置：今日10,000 / 本周50,000 / 本月100,000');location.reload()">🔄 重置数据</span>
 <div class="footer">赔率来源 DraftKings · 整数=串关 点击赔率即可选中（可多选）</div>
 
 <script>
@@ -849,7 +848,8 @@ async function settleAllBets(){
   }catch(e){
     alert("结算失败: "+e.message);
   }
-  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";}
+  if(btn){btn.disabled=false;btn.textContent="🤖 自动结算";
+  var resetBtn=document.createElement("button");resetBtn.id="resetBtn";resetBtn.textContent="🔄 重置数据";resetBtn.style.cssText="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px";resetBtn.onclick=resetAllData;container.appendChild(resetBtn);}
 }
 
 function addSettleBtn(){
@@ -858,6 +858,7 @@ function addSettleBtn(){
   var btn=document.createElement("button");
   btn.id="settleBtn";
   btn.textContent="🤖 自动结算";
+  var resetBtn=document.createElement("button");resetBtn.id="resetBtn";resetBtn.textContent="🔄 重置数据";resetBtn.style.cssText="width:100%;background:#64748b;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:6px";resetBtn.onclick=resetAllData;container.appendChild(resetBtn);
   btn.style.cssText="width:100%;background:#dc2626;color:#fff;border:none;border-radius:14px;padding:10px;font-size:.82rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 16px rgba(220,38,38,0.35)";
   btn.onclick=settleAllBets;
   var container=histPanel.querySelector("div");
