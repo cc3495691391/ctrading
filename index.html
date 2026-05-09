@@ -746,6 +746,7 @@ function renderRptC(){var c=curCap(),b=getCap(),ts=getTrades().filter(function(t
 </script>
 <script>
 // ═══ AUTO-SETTLE: Fetch real match results from ESPN ═══
+function resetAllData(){if(!confirm('\u786e\u5b9a\u91cd\u7f6e\u6240\u6709\u6570\u636e\uff1f\n\u5c06\u6e05\u9664\u6240\u6709\u5386\u53f2\u4ea4\u6613\u548c\u8d44\u91d1\u8bb0\u5f55'))return;localStorage.clear();localStorage.setItem('ct_c','200000');alert('\u5df2\u91cd\u7f6e\n\u4eca\u65e5\u53ef\u7528: 10,000\n\u672c\u5468\u53ef\u7528: 50,000\n\u672c\u6708\u53ef\u7528: 100,000');location.reload();}
 function getTodayStr(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
 
 async function settleAllBets(){
